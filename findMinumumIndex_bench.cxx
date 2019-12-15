@@ -133,6 +133,7 @@ BENCHMARK(findMinimumIndexAVX2)->Range(64, 8<<9);
 #if defined(__SSE4_1__) 
 #include <smmintrin.h>
 const auto mm_blendv_epi8 = _mm_blendv_epi8;
+const auto mm_blendv_ps =   _mm_blendv_ps;
 #elif defined(__SSE2__)
 #include <emmintrin.h> 
 static inline __m128i SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask) {
