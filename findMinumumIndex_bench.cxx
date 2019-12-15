@@ -210,7 +210,7 @@ static void  findMinimumIndexSSEBlendValues_4(benchmark::State& state) {
       indices = _mm_add_epi32(indices, increment);
       __m128i lt           = _mm_castps_si128 (_mm_cmplt_ps(values, minvalues));
       minindices = mm_blendv_epi8(minindices, indices, lt);
-      minvalues  = mm_blendv_ps(values, minvalues, lt);
+      minvalues  = mm_blendv_ps(minvalues,values, lt);
     }
     /*
      * do the final calculation scalar way
