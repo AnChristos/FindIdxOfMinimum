@@ -10,7 +10,7 @@ constexpr int alignment=64;
  * create global data 
  * a bit hacky way
  */
-constexpr size_t nn=8<<9;
+constexpr size_t nn=8<<10;
 float *inArray;
 class InitArray{
 public:
@@ -52,7 +52,7 @@ static void findMinimumIndexC(benchmark::State& state){
     benchmark::ClobberMemory();
   }
 } 
-BENCHMARK(findMinimumIndexC)->Range(64, 8<<9);
+BENCHMARK(findMinimumIndexC)->Range(64, nn);
 
 /* 
  * Scalar code using STL  
@@ -67,7 +67,7 @@ static void findMinimumIndexSTL(benchmark::State& state){
 
   }
 }
-BENCHMARK(findMinimumIndexSTL)->Range(64, 8<<9);
+BENCHMARK(findMinimumIndexSTL)->Range(64, nn);
 
 #if defined(__AVX2__)
 #warning ( "AVX2" )
@@ -126,15 +126,17 @@ static void findMinimumIndexAVX2(benchmark::State& state) {
   }
 }
 
-BENCHMARK(findMinimumIndexAVX2)->Range(64, 8<<9);
+BENCHMARK(findMinimumIndexAVX2)->Range(64, nn);
 #endif
 
 #if defined(__SSE4_1__) || defined(__SSE2__) 
 #if defined(__SSE4_1__) 
+#warning ( "SSE4_1" )
 #include <smmintrin.h>
 const auto mm_blendv_epi8 = _mm_blendv_epi8;
 const auto mm_blendv_ps =   _mm_blendv_ps;
 #elif defined(__SSE2__)
+#warning ( "SSE2" )
 #include <emmintrin.h> 
 static inline __m128i SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask) {
   return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
@@ -187,7 +189,7 @@ static void  findMinimumIndexSSE_4(benchmark::State& state) {
   }
 }
 
-BENCHMARK(findMinimumIndexSSE_4)->Range(64, 8<<9);
+BENCHMARK(findMinimumIndexSSE_4)->Range(64, nn);
 
 
 /*
@@ -232,7 +234,7 @@ static void  findMinimumIndexSSEBlendValues_4(benchmark::State& state) {
   }
 }
 
-BENCHMARK(findMinimumIndexSSEBlendValues_4)->Range(64, 8<<9);
+BENCHMARK(findMinimumIndexSSEBlendValues_4)->Range(64, nn);
 
 
 /*
@@ -289,7 +291,7 @@ static void findMinimumIndexSSE_8(benchmark::State& state) {
   }
 }
 
-BENCHMARK(findMinimumIndexSSE_8)->Range(64, 8<<9);
+BENCHMARK(findMinimumIndexSSE_8)->Range(64, nn);
 #endif //AVX vs SSE2/4.1
 
 BENCHMARK_MAIN();
