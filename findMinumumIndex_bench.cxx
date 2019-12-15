@@ -39,12 +39,12 @@ static void findMinimumIndexC(benchmark::State& state){
   for (auto _ : state) {
     const int n=state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-    float minimum = array[0]; 
+    float minvalue = array[0]; 
     size_t minIndex=0; 
     for (int i=0 ; i<n ; ++i){
       const float value = array[i]; 
-      if(value<minimum){
-        minimum=value;
+      if(value<minvalue){
+        minvalue=value;
         minIndex=i;
       }     
     }

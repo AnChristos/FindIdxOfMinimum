@@ -37,17 +37,17 @@ InitArray initArray;
  */
 static void findMinimumIndexC(){  
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-  float minValue = array[0]; 
+  float minvalue = array[0]; 
   size_t minIndex=0; 
   for (int i=0 ; i<nn ; ++i){
     const float value = array[i]; 
-    if(value<minValue){
-      minValue=value;
+    if(value<minvalue){
+      minvalue=value;
       minIndex=i;
     }     
   }
 
-  std::cout<<"Minimum index :"  << minIndex << " with value " <<minValue <<std::endl;
+  std::cout<<"Minimum index :"  << minIndex << " with value " <<minvalue <<std::endl;
 } 
 
 /* 
@@ -100,15 +100,15 @@ static void findMinimumIndexAVX2() {
   _mm256_store_ps(finalValues,minvalues);
   _mm256_store_si256((__m256i*)(finalIndices), minindices);
   size_t  minIndex = finalIndices[0];
-  float  minValue = finalValues[0];
+  float  minvalue = finalValues[0];
   for (size_t i=1; i < 8; ++i) {
     const float value = finalValues[i];
-    if (value < minValue) {
-      minValue = value;
+    if (value < minvalue) {
+      minvalue = value;
       minIndex = finalIndices[i];
     }    
   }
-  std::cout<<"Minimum index :"  << minIndex << " with value " <<minValue <<std::endl;
+  std::cout<<"Minimum index :"  << minIndex << " with value " <<minvalue <<std::endl;
 }
 
 #endif
@@ -158,15 +158,15 @@ static void  findMinimumIndexSSE_4() {
   _mm_store_si128((__m128i*)finalIndices, minindices);
 
   size_t  minIndex = finalIndices[0];
-  float  minValue = finalValues[0];
+  float  minvalue = finalValues[0];
   for (size_t i=1; i < 4; ++i) {
     const float value = finalValues[i];  
-    if (value < minValue) {
-      minValue = value;
+    if (value < minvalue) {
+      minvalue = value;
       minIndex = finalIndices[i];
     }    
   }
-  std::cout<<"Minimum index :"  << minIndex << " with value " <<minValue <<std::endl;
+  std::cout<<"Minimum index :"  << minIndex << " with value " <<minvalue <<std::endl;
 }
 
 
@@ -198,15 +198,15 @@ static void  findMinimumIndexSSEBlendValues_4() {
   _mm_store_si128((__m128i*)finalIndices, minindices);
 
   size_t  minIndex = finalIndices[0];
-  float  minValue = finalValues[0];
+  float  minvalue = finalValues[0];
   for (size_t i=1; i < 4; ++i) {
     const float value = finalValues[i];  
-    if (value < minValue) {
-      minValue = value;
+    if (value < minvalue) {
+      minvalue = value;
       minIndex = finalIndices[i];
     }    
   }
-  std::cout<<"Minimum index :"  << minIndex << " with value " <<minValue <<std::endl;
+  std::cout<<"Minimum index :"  << minIndex << " with value " <<minvalue <<std::endl;
 }
 
 /*
@@ -248,15 +248,15 @@ static void findMinimumIndexSSE_8() {
   _mm_store_si128((__m128i*)(finalIndices), minindices1);
   _mm_store_si128((__m128i*)(finalIndices+4), minindices2);
   size_t  minIndex = finalIndices[0];
-  float  minValue = finalValues[0];
+  float  minvalue = finalValues[0];
   for (size_t i=1; i < 8; ++i) {
     const float value = finalValues[i];
-    if (value < minValue) {
-      minValue = value;
+    if (value < minvalue) {
+      minvalue = value;
       minIndex = finalIndices[i];
     }    
   }
-  std::cout<<"Minimum index :"  << minIndex << " with value " <<minValue <<std::endl;
+  std::cout<<"Minimum index :"  << minIndex << " with value " <<minvalue <<std::endl;
 }
 
 #endif //AVX vs SSE2/4.1
