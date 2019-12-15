@@ -138,7 +138,11 @@ const auto mm_blendv_epi8 = _mm_blendv_epi8;
 static inline __m128i SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask) {
   return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
 }
+static inline __m128 SSE2_mm_blendv_ps(__m128 a, __m128 b, __m128i mask) {
+  return _mm_or_ps(_mm_andnot_ps(_mm_castsi128_ps(mask), a), _mm_and_ps(_mm_castsi128_ps(mask), b));
+}
 const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
+const auto mm_blendv_ps = SSE2_mm_blendv_ps;
 #endif //on SSE4.1 vs SSE2
 /*
  * SSE2/4.1 : 4 elemets at a time
@@ -183,6 +187,52 @@ static void  findMinimumIndexSSE_4(benchmark::State& state) {
 }
 
 BENCHMARK(findMinimumIndexSSE_4)->Range(64, 8<<9);
+
+
+/*
+ * SSE2/4.1 : 4 elemets at a time. Avoid recomputation of min values
+ */
+static void  findMinimumIndexSSEBlendValues_4(benchmark::State& state) {
+
+  for (auto _ : state) {
+    const int n=state.range(0);
+    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
+    const __m128i increment = _mm_set1_epi32(4);
+    __m128i indices         = _mm_setr_epi32(0, 1, 2, 3);
+    __m128i minindices      = indices;
+    __m128 minvalues        = _mm_load_ps(array);
+
+    for (int i=4; i<n; i+=4) {
+      const __m128 values        = _mm_load_ps((array + i));
+      indices = _mm_add_epi32(indices, increment);
+      __m128i lt           = _mm_castps_si128 (_mm_cmplt_ps(values, minvalues));
+      minindices = mm_blendv_epi8(minindices, indices, lt);
+      minvalues  = mm_blendv_ps(values, minvalues, lt);
+    }
+    /*
+     * do the final calculation scalar way
+     */
+    alignas(alignment) float  finalValues[4];
+    alignas(alignment) int32_t finalIndices[4];
+    _mm_store_ps(finalValues,minvalues);
+    _mm_store_si128((__m128i*)finalIndices, minindices);
+
+    size_t  minIndex = finalIndices[0];
+    float  minvalue = finalValues[0];
+    for (size_t i=1; i < 4; ++i) {
+      const float value = finalValues[i];  
+      if (value < minvalue) {
+        minvalue = value;
+        minIndex = finalIndices[i];
+      }    
+    }
+    benchmark::DoNotOptimize(&minIndex);
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK(findMinimumIndexSSEBlendValues_4)->Range(64, 8<<9);
+
 
 /*
  * SSE2/4.1 : 8 elements at time
