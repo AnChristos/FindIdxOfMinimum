@@ -267,7 +267,9 @@ int main(){
   findMinimumIndexSSE_4();
   findMinimumIndexSSEBlendValues_4();
   findMinimumIndexSSE_8();
+#if defined(__AVX2__) 
   findMinimumIndexAVX2();
+#endif  
   return 0;
 
 }
