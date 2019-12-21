@@ -54,6 +54,23 @@ static void findMinimumIndexC(benchmark::State& state){
 } 
 BENCHMARK(findMinimumIndexC)->Range(64, nn);
 
+static void findMinimumIndexCNoVal(benchmark::State& state){  
+  for (auto _ : state) {
+    const int n=state.range(0);
+    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
+    size_t minIndex=0; 
+    for (int i=0 ; i<n ; ++i){
+      if(array[i]<array[minIndex]){
+        minIndex=i;
+      }     
+    }
+    benchmark::DoNotOptimize(&minIndex);
+    benchmark::ClobberMemory();
+  }
+} 
+BENCHMARK(findMinimumIndexCNoVal)->Range(64, nn);
+
+
 /* 
  * Scalar code using STL  
  */
