@@ -7,10 +7,18 @@ Testing various implementation of finding the index of the minimum element in an
 - Using AVX2 intrinsics
 
 
-clang8 with  -march=x86-64 -O2 example output
+clang8 example ouput
 -------------------------------------
 ```
-2019-12-21 12:35:18
+clang++ findMinumumIndex_bench.cxx -std=c++17 -march=native  -O3 -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -o mybenchmark
+findMinumumIndex_bench.cxx:94:2: warning: ( "AVX2" ) [-W#warnings]
+#warning( "AVX2" )
+ ^
+findMinumumIndex_bench.cxx:156:2: warning: ( "SSE4_1" ) [-W#warnings]
+#warning( "SSE4_1" )
+..........
+..........
+2019-12-21 15:08:02
 Running ./mybenchmark
 Run on (8 X 2500 MHz CPU s)
 CPU Caches:
@@ -18,36 +26,39 @@ CPU Caches:
   L1 Instruction 32 KiB (x4)
   L2 Unified 256 KiB (x4)
   L3 Unified 6144 KiB (x1)
-Load Average: 1.29, 1.48, 1.62
+Load Average: 1.59, 1.80, 1.90
 --------------------------------------------------------------------------------
 Benchmark                                      Time             CPU   Iterations
 --------------------------------------------------------------------------------
-findMinimumIndexC/64                        61.3 ns         61.2 ns     11251487
-findMinimumIndexC/512                        316 ns          316 ns      2182297
-findMinimumIndexC/4096                      2371 ns         2369 ns       294877
-findMinimumIndexC/8192                      4706 ns         4703 ns       152636
-findMinimumIndexCNoVal/64                   37.2 ns         37.1 ns     18929970
-findMinimumIndexCNoVal/512                   237 ns          236 ns      2827632
-findMinimumIndexCNoVal/4096                 1783 ns         1782 ns       395132
-findMinimumIndexCNoVal/8192                 3594 ns         3588 ns       194229
-findMinimumIndexSTL/64                      31.6 ns         31.5 ns     22253731
-findMinimumIndexSTL/512                      224 ns          223 ns      3096866
-findMinimumIndexSTL/4096                    1681 ns         1679 ns       413611
-findMinimumIndexSTL/8192                    3258 ns         3255 ns       214142
-findMinimumIndexSSE_4/64                    19.8 ns         19.8 ns     35176586
-findMinimumIndexSSE_4/512                    155 ns          155 ns      4520912
-findMinimumIndexSSE_4/4096                  1248 ns         1246 ns       546111
-findMinimumIndexSSE_4/8192                  2500 ns         2492 ns       282222
-findMinimumIndexSSEBlendValues_4/64         30.6 ns         30.5 ns     23019652
-findMinimumIndexSSEBlendValues_4/512         245 ns          245 ns      2789600
-findMinimumIndexSSEBlendValues_4/4096       2042 ns         2039 ns       348531
-findMinimumIndexSSEBlendValues_4/8192       4105 ns         4101 ns       169452
-findMinimumIndexSSE_8/64                    20.2 ns         20.2 ns     34641118
-findMinimumIndexSSE_8/512                    124 ns          124 ns      5612527
-findMinimumIndexSSE_8/4096                   938 ns          937 ns       739309
-findMinimumIndexSSE_8/8192                  1883 ns         1881 ns       369062
+findMinimumIndexC/64                        50.5 ns         50.4 ns     13554334
+findMinimumIndexC/512                        316 ns          316 ns      2173198
+findMinimumIndexC/4096                      2406 ns         2402 ns       293234
+findMinimumIndexC/8192                      4705 ns         4701 ns       148357
+findMinimumIndexCNoVal/64                   24.5 ns         24.5 ns     28932674
+findMinimumIndexCNoVal/512                   191 ns          191 ns      3673326
+findMinimumIndexCNoVal/4096                 1368 ns         1367 ns       505642
+findMinimumIndexCNoVal/8192                 2678 ns         2677 ns       256772
+findMinimumIndexSTL/64                      29.4 ns         29.4 ns     23620878
+findMinimumIndexSTL/512                      209 ns          208 ns      3335986
+findMinimumIndexSTL/4096                    1611 ns         1610 ns       435489
+findMinimumIndexSTL/8192                    3156 ns         3154 ns       219377
+findMinimumIndexAVX2/64                     18.5 ns         18.5 ns     38010632
+findMinimumIndexAVX2/512                    91.9 ns         91.8 ns      7618053
+findMinimumIndexAVX2/4096                    683 ns          681 ns      1025085
+findMinimumIndexAVX2/8192                   1350 ns         1348 ns       518522
+findMinimumIndexSSE_4/64                    20.2 ns         20.2 ns     34335269
+findMinimumIndexSSE_4/512                    157 ns          157 ns      4441343
+findMinimumIndexSSE_4/4096                  1246 ns         1246 ns       553727
+findMinimumIndexSSE_4/8192                  2478 ns         2476 ns       280094
+findMinimumIndexSSEBlendValues_4/64         20.5 ns         20.4 ns     34381477
+findMinimumIndexSSEBlendValues_4/512         158 ns          157 ns      4369320
+findMinimumIndexSSEBlendValues_4/4096       1252 ns         1250 ns       562570
+findMinimumIndexSSEBlendValues_4/8192       2479 ns         2477 ns       277343
+findMinimumIndexSSE_8/64                    19.4 ns         19.4 ns     36333814
+findMinimumIndexSSE_8/512                    116 ns          116 ns      5992176
+findMinimumIndexSSE_8/4096                   880 ns          879 ns       778617
+findMinimumIndexSSE_8/8192                  1750 ns         1748 ns       395364
 ```
-
 
 
 
