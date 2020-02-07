@@ -94,35 +94,35 @@ BENCHMARK(findMinimumIndexSTL)->Range(64, nn);
 /*
  * Use vector extensions
  */
-typedef float vec8f __attribute__((vector_size(32)));
-typedef int vec8i __attribute__((vector_size(32)));
+typedef float vec4f __attribute__((vector_size(16)));
+typedef int vec4i __attribute__((vector_size(16)));
 
 static void
-findMinimumIndexVector8(benchmark::State& state)
+findMinimumIndexVector4(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
 
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
-    vec8i increment = { 8, 8, 8, 8, 8, 8, 8, 8 };
-    vec8i indices = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    vec8i minindices = indices;
-    vec8f minvalues;
+    vec4i increment = { 4, 4, 4, 4};
+    vec4i indices = { 0, 1, 2, 3};
+    vec4i minindices = indices;
+    vec4f minvalues;
     memcpy(&minvalues, array, sizeof(minvalues));
 
-    for (int i = 8; i < n; i += 8) {
-      vec8f values;
+    for (int i = 4; i < n; i += 4) {
+      vec4f values;
       memcpy(&values, array + i, sizeof(values));
       indices = indices + increment;
-      vec8i lt = values < minvalues;
+      vec4i lt = values < minvalues;
 #if defined(__GNUC__)
     minindices = lt? indices : minindices;
     minvalues = lt ? values : minvalues;
 #else
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 4; i++)
       minindices[i] = lt[i] ? indices[i] : minindices[i];
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 4; i++)
       minvalues[i] = lt[i] ? values[i] : minvalues[i];
 #endif  
     }
@@ -131,7 +131,7 @@ findMinimumIndexVector8(benchmark::State& state)
      */
     size_t minIndex = minindices[0];
     float minvalue = minvalues[0];
-    for (size_t i = 1; i < 8; ++i) {
+    for (size_t i = 1; i < 4; ++i) {
       if (minvalues[i] < minvalue) {
         minvalue = minvalues[i];
         minIndex = minindices[i];
@@ -141,7 +141,7 @@ findMinimumIndexVector8(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexVector8)->Range(64, nn);
+BENCHMARK(findMinimumIndexVector4)->Range(64, nn);
 
 #if defined(__AVX2__)
 #warning( "AVX2" )
