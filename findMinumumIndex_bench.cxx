@@ -116,7 +116,7 @@ findMinimumIndexVector4(benchmark::State& state)
       memcpy(&values, array + i, sizeof(values));
       indices = indices + increment;
       vec4i lt = values < minvalues;
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
     minindices = lt? indices : minindices;
     minvalues = lt ? values : minvalues;
 #else
