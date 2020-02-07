@@ -94,10 +94,8 @@ BENCHMARK(findMinimumIndexSTL)->Range(64, nn);
 /*
  * Use vector extensions
  */
-#if defined(__clang__)
 typedef float vec8f __attribute__((vector_size(32)));
 typedef int vec8i __attribute__((vector_size(32)));
-#endif
 
 static void
 findMinimumIndexVector8(benchmark::State& state)

@@ -79,10 +79,8 @@ findMinimumIndexSTL()
   std::cout << "Minimum index :" << minIndex << std::endl;
 }
 
-#if defined(__clang__)
-typedef float vec8f __attribute__((ext_vector_type(8)));
-typedef int vec8i __attribute__((ext_vector_type(8)));
-#endif
+typedef float vec8f __attribute__((vector_size(32)));
+typedef int vec8i __attribute__((vector_size(32)));
 
 static void
 findMinimumIndexVector_8()
