@@ -116,10 +116,15 @@ findMinimumIndexVector8(benchmark::State& state)
       memcpy(&values, array + i, sizeof(values));
       indices = indices + increment;
       vec8i lt = values < minvalues;
-      for (int i = 0; i < 8; i++)
-        minindices[i] = lt[i] ? indices[i] : minindices[i];
-      for (int i = 0; i < 8; i++)
-        minvalues[i] = lt[i] ? values[i] : minvalues[i];
+#if defined(__GNUC__)
+    minindices = lt? indices : minindices;
+    minvalues = lt ? values : minvalues;
+#else
+    for (int i = 0; i < 8; i++)
+      minindices[i] = lt[i] ? indices[i] : minindices[i];
+    for (int i = 0; i < 8; i++)
+      minvalues[i] = lt[i] ? values[i] : minvalues[i];
+#endif  
     }
     /*
      * do the final calculation scalar way
