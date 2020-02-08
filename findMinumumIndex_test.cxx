@@ -38,6 +38,7 @@ InitArray initArray;
 static void
 findMinimumIndexC()
 {
+
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
   float minvalue = array[0];
   size_t minIndex = 0;
