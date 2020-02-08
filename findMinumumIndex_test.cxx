@@ -312,18 +312,20 @@ findMinimumIndexSSE_8()
     minindices2 = mm_blendv_epi8(minindices2, indices2, lt2);
     minvalues2 = _mm_min_ps(values2, minvalues2);
   }
+   //Compare //1 with //2 
+    __m128i lt = _mm_castps_si128(_mm_cmplt_ps(minvalues1, minvalues2));
+    minindices1 = mm_blendv_epi8(minindices2,minindices1, lt);
+    minvalues1 = _mm_min_ps(minvalues2, minvalues1);
   /*
    * Do the final calculation scalar way
    */
-  alignas(alignment) float finalValues[8];
-  alignas(alignment) int32_t finalIndices[8];
+  alignas(alignment) float finalValues[4];
+  alignas(alignment) int32_t finalIndices[4];
   _mm_store_ps(finalValues, minvalues1);
-  _mm_store_ps(finalValues + 4, minvalues2);
   _mm_store_si128((__m128i*)(finalIndices), minindices1);
-  _mm_store_si128((__m128i*)(finalIndices + 4), minindices2);
   size_t minIndex = finalIndices[0];
   float minvalue = finalValues[0];
-  for (size_t i = 1; i < 8; ++i) {
+  for (size_t i = 1; i < 4; ++i) {
     const float value = finalValues[i];
     if (value < minvalue) {
       minvalue = value;
