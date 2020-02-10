@@ -1,7 +1,10 @@
-﻿#include <algorithm>
+﻿#pragma GCC optimize ("tree-vectorize")
+
+#include <algorithm>
 #include <iostream>
 #include <random>
 #include <stdlib.h>
+#include <string.h>
 /*
  * Alignment of  64 bytes
  */
@@ -79,38 +82,42 @@ findMinimumIndexSTL()
 
   std::cout << "Minimum index :" << minIndex << std::endl;
 }
-
-typedef float vec8f __attribute__((vector_size(32)));
-typedef int vec8i __attribute__((vector_size(32)));
+typedef float vec4f __attribute__((vector_size(16)));
+typedef int vec4i __attribute__((vector_size(16)));
 
 static void
-findMinimumIndexVector_8()
+findMinimumIndexVector_4()
 {
 
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
-  vec8i increment = { 8, 8, 8, 8, 8, 8, 8, 8 };
-  vec8i indices = { 0, 1, 2, 3, 4, 5, 6, 7 };
-  vec8i minindices = indices;
-  vec8f minvalues;
+  vec4i increment = { 4, 4, 4, 4};
+  vec4i indices = { 0, 1, 2, 3};
+  vec4i minindices = indices;
+  vec4f minvalues;
   memcpy(&minvalues, array, sizeof(minvalues));
 
-  for (int i = 8; i < nn; i += 8) {
-    vec8f values;
+  for (int i = 4; i < nn; i += 4) {
+    vec4f values;
     memcpy(&values, array + i, sizeof(values));
     indices = indices + increment;
-    vec8i lt = values < minvalues;
-    for (int i = 0; i < 8; i++)
+    vec4i lt = values < minvalues;
+ #if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
+    minindices = lt? indices : minindices;
+    minvalues = lt ? values : minvalues;
+#else
+    for (int i = 0; i < 4; i++)
       minindices[i] = lt[i] ? indices[i] : minindices[i];
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 4; i++)
       minvalues[i] = lt[i] ? values[i] : minvalues[i];
-  }
+#endif  
+    }
   /*
    * do the final calculation scalar way
    */
   size_t minIndex = minindices[0];
   float minvalue = minvalues[0];
-  for (size_t i = 1; i < 8; ++i) {
+  for (size_t i = 1; i < 4; ++i) {
     if (minvalues[i] < minvalue) {
       minvalue = minvalues[i];
       minIndex = minindices[i];
@@ -341,7 +348,7 @@ findMinimumIndexSSE_8()
 int
 main()
 {
-  findMinimumIndexVector_8();
+  findMinimumIndexVector_4();
   findMinimumIndexC();
   findMinimumIndexCNoVal();
   findMinimumIndexSTL();

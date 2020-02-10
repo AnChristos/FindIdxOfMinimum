@@ -1,8 +1,13 @@
-﻿#include <algorithm>
+﻿#pragma GCC optimize ("tree-vectorize")
+
+#include <algorithm>
 #include <benchmark/benchmark.h>
 #include <random>
 #include <stdlib.h>
 #include <string.h>
+
+
+
 /*
  * Alignment of  32 bytes
  */
