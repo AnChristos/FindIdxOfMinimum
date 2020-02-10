@@ -1,4 +1,4 @@
-﻿#pragma GCC optimize ("tree-vectorize")
+﻿#pragma GCC optimize ("O3")
 
 #include <algorithm>
 #include <benchmark/benchmark.h>
