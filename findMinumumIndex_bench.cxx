@@ -1,4 +1,4 @@
-﻿#pragma GCC optimize ("O3")
+﻿#pragma GCC optimize ("-O3")
 
 #include <algorithm>
 #include <benchmark/benchmark.h>
