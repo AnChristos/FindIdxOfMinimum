@@ -35,8 +35,24 @@ public:
 };
 InitArray initArray;
 
+
+int* intArray;
+class IndexArray
+{
+public:
+  IndexArray()
+  {
+    // create buffer of right size,properly aligned
+    size_t const size = nn * sizeof(int);
+    posix_memalign((void**)&intArray, alignment, size);
+    std::iota(intArray, intArray+nn,0);
+  }
+  ~IndexArray() { free(intArray); }
+};
+IndexArray indexArray;
+
 static void
-findMinimumIndexC(benchmark::State& state)
+find2MinimumIndexC(benchmark::State& state)
 {
 
   for (auto _ : state) {
@@ -65,7 +81,24 @@ findMinimumIndexC(benchmark::State& state)
   }
 }
 
-BENCHMARK(findMinimumIndexC)->Range(64, nn);
+BENCHMARK(find2MinimumIndexC)->Range(8, nn);
+
+static void
+find2MinimaSTL(benchmark::State& state){
+  for (auto _ : state) {
+    const int n = state.range(0);
+    //STL
+    int* iArray = (int*)__builtin_assume_aligned(intArray, alignment);
+    float* testArray = (float*)__builtin_assume_aligned(inArray, alignment);
+    auto comp =[&testArray](const int &i, const int & j){return testArray[i]<testArray[j];};
+    std::partial_sort(iArray,iArray+2, iArray+n, comp); //produces the two smallest indices
+    benchmark::DoNotOptimize(&iArray[0]);
+    benchmark::DoNotOptimize(&iArray[1]);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(find2MinimaSTL)->Range(8, nn);
+
 
 BENCHMARK_MAIN();
 
