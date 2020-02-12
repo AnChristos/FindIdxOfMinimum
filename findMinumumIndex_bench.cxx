@@ -60,7 +60,7 @@ findMinimumIndexC(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexC)->Range(64, nn);
+BENCHMARK(findMinimumIndexC)->Range(8, nn);
 
 static void
 findMinimumIndexC2(benchmark::State& state)
@@ -78,7 +78,7 @@ findMinimumIndexC2(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexC2)->Range(64, nn);
+BENCHMARK(findMinimumIndexC2)->Range(8, nn);
 
 /*
  * Scalar code using STL
@@ -94,7 +94,7 @@ findMinimumIndexSTL(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexSTL)->Range(64, nn);
+BENCHMARK(findMinimumIndexSTL)->Range(8, nn);
 
 /*
  * Use vector extensions
@@ -146,7 +146,7 @@ findMinimumIndexVector4(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexVector4)->Range(64, nn);
+BENCHMARK(findMinimumIndexVector4)->Range(8, nn);
 
 #if defined(__AVX2__)
 #warning( "AVX2" )
@@ -207,7 +207,7 @@ findMinimumIndexAVX2(benchmark::State& state)
   }
 }
 
-BENCHMARK(findMinimumIndexAVX2)->Range(64, nn);
+BENCHMARK(findMinimumIndexAVX2)->Range(8, nn);
 #endif
 #if defined(__SSE4_1__) || defined(__SSE2__)
 #if defined(__SSE4_1__)
@@ -275,7 +275,7 @@ findMinimumIndexSSE_4(benchmark::State& state)
   }
 }
 
-BENCHMARK(findMinimumIndexSSE_4)->Range(64, nn);
+BENCHMARK(findMinimumIndexSSE_4)->Range(8, nn);
 /*
  * SSE2/4.1 : 8 elements at time
  */
@@ -334,7 +334,7 @@ findMinimumIndexSSE_8(benchmark::State& state)
   }
 }
 
-BENCHMARK(findMinimumIndexSSE_8)->Range(64, nn);
+BENCHMARK(findMinimumIndexSSE_8)->Range(8, nn);
 #endif // AVX vs SSE2/4.1
 
 BENCHMARK_MAIN();
