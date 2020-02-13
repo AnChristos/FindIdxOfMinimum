@@ -144,7 +144,6 @@ findMinimumIndexVector4(benchmark::State& state)
 BENCHMARK(findMinimumIndexVector4)->Range(8, nn);
 
 #if defined(__AVX2__)
-#warning( "AVX2" )
 #include <immintrin.h>
 /*
  * AVX2 : 8 elements at a time
@@ -215,7 +214,6 @@ SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
 {
   return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
 }
-static inline __m128
 const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
 #endif // on SSE4.1 vs SSE2
 /*

@@ -89,22 +89,20 @@ findMinimumIndex(benchmark::State& state)
   }
 }
 
-#if defined(__SSE4_1__)
-const auto mm_blendv_epi8 = _mm_blendv_epi8;
-#elif defined(__SSE2__)
-static inline __m128i
-SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
+
+__attribute__((target("default"))) 
+__m128i
+mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
 {
   return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
 }
-static inline __m128
-SSE2_mm_blendv_ps(__m128 a, __m128 b, __m128 mask)
-{
-  return _mm_or_ps(_mm_andnot_ps(mask, a), _mm_and_ps(mask, b));
-}
-const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
-#endif // on SSE4.1 vs SSE2
 
+__attribute__((target("sse4.2"))) 
+__m128i
+mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
+{
+  return _mm_blendv_epi8 (a,b,mask);
+}
 /*
  * SSE2/4.1 : 8 elements at time
  */
