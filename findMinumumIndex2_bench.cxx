@@ -1,9 +1,7 @@
-﻿
-#include <algorithm>
+﻿#include <algorithm>
 #include <benchmark/benchmark.h>
 #include <random>
 #include <stdlib.h>
-#include <iostream>
 /*
  * Alignment of  64 bytes
  */

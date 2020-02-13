@@ -3,9 +3,6 @@
 #include <random>
 #include <stdlib.h>
 #include <string.h>
-
-
-
 /*
  * Alignment of  32 bytes
  */
@@ -209,12 +206,9 @@ BENCHMARK(findMinimumIndexAVX2)->Range(8, nn);
 #endif
 #if defined(__SSE4_1__) || defined(__SSE2__)
 #if defined(__SSE4_1__)
-#warning( "SSE4_1" )
 #include <smmintrin.h>
 const auto mm_blendv_epi8 = _mm_blendv_epi8;
-const auto mm_blendv_ps = _mm_blendv_ps;
 #elif defined(__SSE2__)
-#warning( "SSE2" )
 #include <emmintrin.h>
 static inline __m128i
 SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
@@ -222,12 +216,7 @@ SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
   return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
 }
 static inline __m128
-SSE2_mm_blendv_ps(__m128 a, __m128 b, __m128 mask)
-{
-  return _mm_or_ps(_mm_andnot_ps(mask, a), _mm_and_ps(mask, b));
-}
 const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
-const auto mm_blendv_ps = SSE2_mm_blendv_ps;
 #endif // on SSE4.1 vs SSE2
 /*
  * SSE2/4.1 : 4 elemets at a time
