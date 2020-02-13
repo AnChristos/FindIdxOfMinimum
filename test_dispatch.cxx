@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <immintrin.h>
-#include <smmintrin.h>
+
 /*
  * Alignment of  64 bytes
  */
@@ -41,8 +41,7 @@ InitArray initArray;
  * AVX2 : 8 elements at a time
  */
 __attribute__ ((target ("avx2")))
-static void
-findMinimumIndex()
+void findMinimumIndex()
 {
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
   const __m256i increment = _mm256_set1_epi32(8);
@@ -90,13 +89,10 @@ findMinimumIndex()
             << std::endl;
 }
 
-
 #if defined(__SSE4_1__)
-#warning( "SSE4_1" )
 const auto mm_blendv_epi8 = _mm_blendv_epi8;
 const auto mm_blendv_ps = _mm_blendv_ps;
 #elif defined(__SSE2__)
-#warning( "SSE2" )
 static inline __m128i
 SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
 {
@@ -116,8 +112,7 @@ const auto mm_blendv_ps = SSE2_mm_blendv_ps;
  * SSE2/4.1 : 8 elements at time
  */
 __attribute__ ((target ("sse4.2,sse2")))
-static void
-findMinimumIndex()
+void findMinimumIndex()
 {
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
@@ -172,8 +167,7 @@ findMinimumIndex()
  * Scalar code kind of C style
  */
 __attribute__ ((target ("default")))
-static void
-findMinimumIndex()
+void findMinimumIndex()
 {
 
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
