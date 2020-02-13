@@ -1,5 +1,4 @@
-﻿#pragma GCC optimize ("O3")
-#include <algorithm>
+﻿#include <algorithm>
 #include <iostream>
 #include <random>
 #include <stdlib.h>
