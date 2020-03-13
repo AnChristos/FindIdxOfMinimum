@@ -3,6 +3,17 @@
 #include <random>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(__GNUC__) && !defined(__clang__)
+#define ATH_ENABLE_VECTORIZATION                                               \
+  _Pragma("GCC optimize (\"tree-loop-vectorize\")") class                      \
+    ATH_ENABLE_VECTORIZATION_SWALLOW_SEMICOLON
+#else
+#define ATH_ENABLE_VECTORIZATION                                               \
+  class ATH_ENABLE_VECTORIZATION_SWALLOW_SEMICOLON
+#endif
+
+ATH_ENABLE_VECTORIZATION;
 /*
  * Alignment of  32 bytes
  */
@@ -105,8 +116,8 @@ findMinimumIndexVector4(benchmark::State& state)
 
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
-    vec4i increment = { 4, 4, 4, 4};
-    vec4i indices = { 0, 1, 2, 3};
+    vec4i increment = { 4, 4, 4, 4 };
+    vec4i indices = { 0, 1, 2, 3 };
     vec4i minindices = indices;
     vec4f minvalues;
     memcpy(&minvalues, array, sizeof(minvalues));
@@ -116,15 +127,10 @@ findMinimumIndexVector4(benchmark::State& state)
       memcpy(&values, array + i, sizeof(values));
       indices = indices + increment;
       vec4i lt = values < minvalues;
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
-    minindices = lt? indices : minindices;
-    minvalues = lt ? values : minvalues;
-#else
-    for (int i = 0; i < 4; i++)
-      minindices[i] = lt[i] ? indices[i] : minindices[i];
-    for (int i = 0; i < 4; i++)
-      minvalues[i] = lt[i] ? values[i] : minvalues[i];
-#endif  
+      for (int i = 0; i < 4; i++)
+        minindices[i] = lt[i] ? indices[i] : minindices[i];
+      for (int i = 0; i < 4; i++)
+        minvalues[i] = lt[i] ? values[i] : minvalues[i];
     }
     /*
      * do the final calculation scalar way
@@ -142,6 +148,49 @@ findMinimumIndexVector4(benchmark::State& state)
   }
 }
 BENCHMARK(findMinimumIndexVector4)->Range(8, nn);
+
+typedef float vec8f __attribute__((vector_size(32)));
+typedef int vec8i __attribute__((vector_size(32)));
+static void
+findMinimumIndexVector8(benchmark::State& state)
+{
+  for (auto _ : state) {
+    const int n = state.range(0);
+
+    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
+
+    vec8i increment = { 8, 8, 8, 8, 8, 8, 8, 8 };
+    vec8i indices = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    vec8i minindices = indices;
+    vec8f minvalues;
+    memcpy(&minvalues, array, sizeof(minvalues));
+
+    for (int i = 8; i < n; i += 8) {
+      vec8f values;
+      memcpy(&values, array + i, sizeof(values));
+      indices = indices + increment;
+      vec8i lt = values < minvalues;
+      for (int i = 0; i < 8; i++)
+        minindices[i] = lt[i] ? indices[i] : minindices[i];
+      for (int i = 0; i < 8; i++)
+        minvalues[i] = lt[i] ? values[i] : minvalues[i];
+    }
+    /*
+     * do the final calculation scalar way
+     */
+    size_t minIndex = minindices[0];
+    float minvalue = minvalues[0];
+    for (size_t i = 1; i < 8; ++i) {
+      if (minvalues[i] < minvalue) {
+        minvalue = minvalues[i];
+        minIndex = minindices[i];
+      }
+    }
+    benchmark::DoNotOptimize(&minIndex);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(findMinimumIndexVector8)->Range(8, nn);
 
 #if defined(__AVX2__)
 #include <immintrin.h>
@@ -294,26 +343,26 @@ findMinimumIndexSSE_8(benchmark::State& state)
       minindices2 = mm_blendv_epi8(minindices2, indices2, lt2);
       minvalues2 = _mm_min_ps(values2, minvalues2);
     }
-   //Compare //1 with //2 
+    // Compare //1 with //2
     __m128i lt = _mm_castps_si128(_mm_cmplt_ps(minvalues1, minvalues2));
-    minindices1 = mm_blendv_epi8(minindices2,minindices1, lt);
+    minindices1 = mm_blendv_epi8(minindices2, minindices1, lt);
     minvalues1 = _mm_min_ps(minvalues2, minvalues1);
-  /*
-   * Do the final calculation scalar way
-   */
-  alignas(alignment) float finalValues[4];
-  alignas(alignment) int32_t finalIndices[4];
-  _mm_store_ps(finalValues, minvalues1);
-  _mm_store_si128((__m128i*)(finalIndices), minindices1);
-  size_t minIndex = finalIndices[0];
-  float minvalue = finalValues[0];
-  for (size_t i = 1; i < 4; ++i) {
-    const float value = finalValues[i];
-    if (value < minvalue) {
-      minvalue = value;
-      minIndex = finalIndices[i];
+    /*
+     * Do the final calculation scalar way
+     */
+    alignas(alignment) float finalValues[4];
+    alignas(alignment) int32_t finalIndices[4];
+    _mm_store_ps(finalValues, minvalues1);
+    _mm_store_si128((__m128i*)(finalIndices), minindices1);
+    size_t minIndex = finalIndices[0];
+    float minvalue = finalValues[0];
+    for (size_t i = 1; i < 4; ++i) {
+      const float value = finalValues[i];
+      if (value < minvalue) {
+        minvalue = value;
+        minIndex = finalIndices[i];
+      }
     }
-   }
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
