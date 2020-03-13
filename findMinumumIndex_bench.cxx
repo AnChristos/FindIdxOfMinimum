@@ -5,12 +5,10 @@
 #include <string.h>
 
 #if defined(__GNUC__) && !defined(__clang__)
-#define ATH_ENABLE_VECTORIZATION                                               \
-  _Pragma("GCC optimize (\"tree-loop-vectorize\")") class                      \
-    ATH_ENABLE_VECTORIZATION_SWALLOW_SEMICOLON
+#define ATH_ENABLE_VECTORIZATION                                                                                       \
+  _Pragma("GCC optimize (\"tree-loop-vectorize\")") class ATH_ENABLE_VECTORIZATION_SWALLOW_SEMICOLON
 #else
-#define ATH_ENABLE_VECTORIZATION                                               \
-  class ATH_ENABLE_VECTORIZATION_SWALLOW_SEMICOLON
+#define ATH_ENABLE_VECTORIZATION class ATH_ENABLE_VECTORIZATION_SWALLOW_SEMICOLON
 #endif
 
 ATH_ENABLE_VECTORIZATION;
@@ -127,10 +125,15 @@ findMinimumIndexVector4(benchmark::State& state)
       memcpy(&values, array + i, sizeof(values));
       indices = indices + increment;
       vec4i lt = values < minvalues;
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
+      minindices = lt ? indices : minindices;
+      minvalues = lt ? values : minvalues;
+#else
       for (int i = 0; i < 4; i++)
         minindices[i] = lt[i] ? indices[i] : minindices[i];
       for (int i = 0; i < 4; i++)
         minvalues[i] = lt[i] ? values[i] : minvalues[i];
+#endif
     }
     /*
      * do the final calculation scalar way
@@ -170,10 +173,15 @@ findMinimumIndexVector8(benchmark::State& state)
       memcpy(&values, array + i, sizeof(values));
       indices = indices + increment;
       vec8i lt = values < minvalues;
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
+      minindices = lt ? indices : minindices;
+      minvalues = lt ? values : minvalues;
+#else
       for (int i = 0; i < 8; i++)
         minindices[i] = lt[i] ? indices[i] : minindices[i];
       for (int i = 0; i < 8; i++)
         minvalues[i] = lt[i] ? values[i] : minvalues[i];
+#endif
     }
     /*
      * do the final calculation scalar way
@@ -221,8 +229,7 @@ findMinimumIndexAVX2(benchmark::State& state)
       /*
        * Get a mask indicating when an element is less than the ones we have
        */
-      __m256i lt =
-        _mm256_castps_si256(_mm256_cmp_ps(values, minvalues, _CMP_LT_OS));
+      __m256i lt = _mm256_castps_si256(_mm256_cmp_ps(values, minvalues, _CMP_LT_OS));
       /*
        * blend select the indices to update
        */
