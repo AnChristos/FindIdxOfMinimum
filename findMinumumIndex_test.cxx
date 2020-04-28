@@ -1,6 +1,4 @@
-﻿
-
-#include <algorithm>
+﻿#include <algorithm>
 #include <iostream>
 #include <random>
 #include <stdlib.h>
@@ -91,8 +89,8 @@ findMinimumIndexVector_4()
 
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
-  vec4i increment = { 4, 4, 4, 4};
-  vec4i indices = { 0, 1, 2, 3};
+  vec4i increment = { 4, 4, 4, 4 };
+  vec4i indices = { 0, 1, 2, 3 };
   vec4i minindices = indices;
   vec4f minvalues;
   memcpy(&minvalues, array, sizeof(minvalues));
@@ -102,16 +100,16 @@ findMinimumIndexVector_4()
     memcpy(&values, array + i, sizeof(values));
     indices = indices + increment;
     vec4i lt = values < minvalues;
- #if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
-    minindices = lt? indices : minindices;
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
+    minindices = lt ? indices : minindices;
     minvalues = lt ? values : minvalues;
 #else
     for (int i = 0; i < 4; i++)
       minindices[i] = lt[i] ? indices[i] : minindices[i];
     for (int i = 0; i < 4; i++)
       minvalues[i] = lt[i] ? values[i] : minvalues[i];
-#endif  
-    }
+#endif
+  }
   /*
    * do the final calculation scalar way
    */
@@ -319,10 +317,10 @@ findMinimumIndexSSE_8()
     minindices2 = mm_blendv_epi8(minindices2, indices2, lt2);
     minvalues2 = _mm_min_ps(values2, minvalues2);
   }
-   //Compare //1 with //2 
-    __m128i lt = _mm_castps_si128(_mm_cmplt_ps(minvalues1, minvalues2));
-    minindices1 = mm_blendv_epi8(minindices2,minindices1, lt);
-    minvalues1 = _mm_min_ps(minvalues2, minvalues1);
+  // Compare //1 with //2
+  __m128i lt = _mm_castps_si128(_mm_cmplt_ps(minvalues1, minvalues2));
+  minindices1 = mm_blendv_epi8(minindices2, minindices1, lt);
+  minvalues1 = _mm_min_ps(minvalues2, minvalues1);
   /*
    * Do the final calculation scalar way
    */
