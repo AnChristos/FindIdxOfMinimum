@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <random>
-#include <immintrin.h>
+#include <x86intrin.h>
 /*
  * Alignment of  32 bytes
  */
@@ -184,7 +184,7 @@ BENCHMARK(findMinimumIndexAVX2)->Range(8, nn);
 /*
  * SSE2/4.1 : 8 elements at time
  */
-#if defined(__SSE4_1__) || defined(__SSE2__)
+#if defined(__SSE2__)
 static void
 findMinimumIndexSSE(benchmark::State& state)
 {
@@ -246,6 +246,7 @@ BENCHMARK(findMinimumIndexSSE)->Range(8, nn);
  * Implementation of the abive but now 
  * using function multiversioning
  */
+#if defined(__ELF__) || defined(__SSE2__)
 __attribute__((target("sse4.2,sse2"))) static void
 findMinimumIndexDispatch(benchmark::State& state)
 {
@@ -300,7 +301,9 @@ findMinimumIndexDispatch(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
+#endif
 
+#if defined(__ELF__) || defined(__AVX2__)
 __attribute__((target("avx2"))) static void
 findMinimumIndexDispatch(benchmark::State& state)
 {
@@ -353,6 +356,7 @@ findMinimumIndexDispatch(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
+#endif
 __attribute__((target("default"))) static void
 findMinimumIndexDispatch(benchmark::State& state)
 {
