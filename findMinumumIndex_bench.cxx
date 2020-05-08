@@ -48,7 +48,7 @@ findMinimumIndexC(benchmark::State& state)
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
     float minvalue = array[0];
-    size_t minIndex = 0;
+    int  minIndex = 0;
     for (int i = 0; i < n; ++i) {
       const float value = array[i];
       if (value < minvalue) {
@@ -71,7 +71,7 @@ findMinimumIndexC2(benchmark::State& state)
   for (auto _ : state) {
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-    size_t minIndex = 0;
+    int  minIndex = 0;
     for (int i = 0; i < n; ++i) {
       if (array[i] < array[minIndex]) {
         minIndex = i;
