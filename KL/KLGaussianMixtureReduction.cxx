@@ -80,8 +80,8 @@ combine(GSFUtils::Component1D& updated,
   updated.invCov = 1. / sumVariance;
   updated.weight = sumWeight;
 
-  removed.mean = 0.;
-  removed.cov = 0.;
+  removed.mean = 1e10;
+  removed.cov = 1e10;
   removed.invCov = 1e10;
   removed.weight = 0.;
 }
@@ -111,10 +111,6 @@ recalculateDistances(const componentPtrRestrict componentsIn,
   for (int32_t i = 0; i < j; ++i) {
     const Component1D componentI = components[i];
     const int32_t index = indexConst + i;
-    if (componentI.cov == 0) {
-      distances[index] = std::numeric_limits<float>::max();
-      continue;
-    }
     distances[index] = symmetricKL(componentI,componentJ);
     if (distances[index] < minDistance) {
       minIndex = index;
@@ -124,10 +120,6 @@ recalculateDistances(const componentPtrRestrict componentsIn,
   for (int32_t i = j + 1; i < n; ++i) {
     const int32_t index = (i - 1) * i / 2 + j;
     const Component1D componentI = components[i];
-    if (componentI.cov == 0) {
-      distances[index] = std::numeric_limits<float>::max();
-      continue;
-    }
     distances[index] = symmetricKL(componentI,componentJ);
     if (distances[index] < minDistance) {
       minIndex = index;

@@ -85,8 +85,7 @@ std::array<Component1D, n> input = {
     { -4.57471e-05, 7.19569e-12, 1.38972e+11, 6.50527e-08 } }
 };
 }
-std::random_device rd;
-std::mt19937 g(rd());
+std::mt19937 g(1);
 void
 test(benchmark::State& state)
 {
