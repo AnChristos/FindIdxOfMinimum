@@ -4,7 +4,7 @@
 #include "KLGaussianMixtureReduction.h"
 #include "AlignedDynArray.h"
 #include <limits>
-
+#include <iostream>
 
 namespace{
 /* 
@@ -37,8 +37,8 @@ symmetricKL(const Component1D& componentI,
  */ 
 [[maybe_unused]]
 float
-weightedSymmetricKL(const Component1D& componentI,
-                    const Component1D& componentJ)
+weightedSymmetricKL(const Component1D componentI,
+                    const Component1D componentJ)
 {
   const double meanDifference = componentI.mean - componentJ.mean;
   const double covDifference = componentI.cov - componentJ.cov;
@@ -91,7 +91,7 @@ combine(GSFUtils::Component1D& updated,
  * and return the minimum index/distance wrt to this
  * new component
  */
-std::pair<int32_t, float>
+void
 recalculateDistances(const componentPtrRestrict componentsIn,
                      floatPtrRestrict distancesIn,
                      const int32_t mini,
@@ -103,30 +103,18 @@ recalculateDistances(const componentPtrRestrict componentsIn,
 
   const int32_t j = mini;
   const int32_t indexConst = (j-1) * j / 2;
-  int32_t minIndex = 0;
-  float minDistance = std::numeric_limits<float>::max();
-
   //Element at the same raw of mini/j
   const Component1D componentJ = components[j];
   for (int32_t i = 0; i < j; ++i) {
     const Component1D componentI = components[i];
     const int32_t index = indexConst + i;
     distances[index] = symmetricKL(componentI,componentJ);
-    if (distances[index] < minDistance) {
-      minIndex = index;
-      minDistance = distances[index];
-    }
   }
   for (int32_t i = j + 1; i < n; ++i) {
     const int32_t index = (i - 1) * i / 2 + j;
     const Component1D componentI = components[i];
     distances[index] = symmetricKL(componentI,componentJ);
-    if (distances[index] < minDistance) {
-      minIndex = index;
-      minDistance = distances[index];
-    }
   }
-  return {minIndex,minDistance};
 }
 
 /** 
@@ -425,31 +413,17 @@ findMerges(componentPtrRestrict componentsIn,
   // merge loop
   int32_t numberOfComponentsLeft = n;
   int32_t minIndex = -1;
-  float currentMinValue = std::numeric_limits<float>::max();
-  bool foundNext =false;
   while (numberOfComponentsLeft > reducedSize) {
     // see if we have the next already
-    if (!foundNext) {
-      std::pair<int32_t,float> minDis = findMinimumIndex(distances, nn2);
-      minIndex = minDis.first;
-      currentMinValue = minDis.second;
-    }
-    //always reset 
-    foundNext=false;
+    std::pair<int32_t, float> minDis = findMinimumIndex(distances, nn2);
+    minIndex = minDis.first;
     const triangularToIJ conversion= convert[minIndex];
     const int32_t mini = conversion.I;
     const int32_t minj = conversion.J;
     // Combine the 2 components
     combine(components[mini], components[minj]);
     // re-calculate distances wrt the new component at mini
-    std::pair<int32_t, float>  possibleNextMin =
-      recalculateDistances(components, distances, mini, n);
-    //We might already got something smaller than the previous minimum
-    if (possibleNextMin.first > 0 && possibleNextMin.second < currentMinValue) {
-      foundNext=true;
-      minIndex= possibleNextMin.first;
-      currentMinValue=possibleNextMin.second;
-    }
+    recalculateDistances(components, distances, mini, n);
     // Reset old weights wrt the  minj position
     resetDistances(distances, minj, n);
     // keep track and decrement
