@@ -47,9 +47,14 @@ findMinimumIndexC(benchmark::State& state)
   for (auto _ : state) {
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
+    float minvalue = array[0];
     int  minIndex = 0;
     for (int i = 0; i < n; ++i) {
-      minIndex= array[i]<array[minIndex] ?  i : minIndex;
+      const float value = array[i];
+      if (value < minvalue) {
+        minvalue = value;
+        minIndex = i;
+      }
     }
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
@@ -68,9 +73,7 @@ findMinimumIndexC2(benchmark::State& state)
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
     int  minIndex = 0;
     for (int i = 0; i < n; ++i) {
-      if (array[i] < array[minIndex]) {
-        minIndex = i;
-      }
+      minIndex= array[i]<array[minIndex] ?  i : minIndex;
     }
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();

@@ -41,11 +41,15 @@ findMinimumIndexC()
 {
 
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
+  float minvalue = array[0];
   size_t minIndex = 0;
   for (int i = 0; i < nn; ++i) {
-    minIndex= array[i]<array[minIndex] ?  i : minIndex;
+    const float value = array[i];
+    if (value < minvalue) {
+      minvalue = value;
+      minIndex = i;
+    }
   }
- 
   std::cout << "Minimum index :" << minIndex << " with value "
             << array[minIndex] << std::endl;
 }
