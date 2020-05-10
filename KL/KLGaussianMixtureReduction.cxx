@@ -25,10 +25,9 @@ symmetricKL(const Component1D& componentI,
             const Component1D& componentJ)
 {
   const double meanDifference = componentI.mean - componentJ.mean;
-  const double covDifference = componentI.cov - componentJ.cov;
-  const double invertCovDiff = componentI.invCov - componentJ.invCov;
   const double inverCovSum = componentI.invCov + componentJ.invCov;
-  return covDifference * invertCovDiff +
+  return componentI.cov * componentJ.invCov +
+         componentJ.cov * componentI.invCov +
          meanDifference * inverCovSum * meanDifference;
 }
 /**
@@ -41,12 +40,12 @@ weightedSymmetricKL(const Component1D componentI,
                     const Component1D componentJ)
 {
   const double meanDifference = componentI.mean - componentJ.mean;
-  const double covDifference = componentI.cov - componentJ.cov;
-  const double invertCovDiff = componentI.invCov - componentJ.invCov;
   const double inverCovSum = componentI.invCov + componentJ.invCov;
   const double weightMul = componentI.weight * componentJ.weight;
-  const double symmetricDis = covDifference * invertCovDiff +
+  const double symmetricDis = componentI.cov * componentJ.invCov +
+                              componentJ.cov * componentI.invCov +
                               meanDifference * inverCovSum * meanDifference;
+
   return weightMul * symmetricDis;
 }
 
@@ -235,9 +234,7 @@ findMinimumIndex(const floatPtrRestrict distancesIn, const int n)
     minindices = _mm256_blendv_epi8(minindices, indicesIn, lt);
     minvalues = _mm256_min_ps(values, minvalues);
   }
-  /*
-   * Do the final calculation scalar way
-   */
+   //Do the final calculation scalar way
   alignas(alignment) float distances[8];
   alignas(alignment) int32_t indices[8];
   _mm256_store_ps(distances, minvalues);
@@ -304,8 +301,6 @@ std::pair<int32_t,float>
 findMinimumIndex(const floatPtrRestrict distancesIn, const int n)
 {
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
-  /* Assuming SSE do 2 vectors of 4 elements in a time
-   * one might want to revisit for AVX2 */
   const __m128i increment = _mm_set1_epi32(8);
   __m128i indices1 = _mm_setr_epi32(0, 1, 2, 3);
   __m128i indices2 = _mm_setr_epi32(4, 5, 6, 7);
@@ -329,9 +324,7 @@ findMinimumIndex(const floatPtrRestrict distancesIn, const int n)
     minindices2 = mm_blendv_epi8(minindices2, indices2, lt2);
     minvalues2 = _mm_min_ps(values2, minvalues2);
   }
-  /*
-   * Do the final calculation scalar way
-   */
+   //Do the final calculation scalar way
   alignas(alignment) float distances[8];
   alignas(alignment) int32_t indices[8];
   _mm_store_ps(distances, minvalues1);
