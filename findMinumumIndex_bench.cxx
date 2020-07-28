@@ -48,7 +48,7 @@ findMinimumIndexC(benchmark::State& state)
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
     float minvalue = array[0];
-    int  minIndex = 0;
+    int minIndex = 0;
     for (int i = 0; i < n; ++i) {
       const float value = array[i];
       if (value < minvalue) {
@@ -71,9 +71,9 @@ findMinimumIndexC2(benchmark::State& state)
   for (auto _ : state) {
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-    int  minIndex = 0;
+    int minIndex = 0;
     for (int i = 0; i < n; ++i) {
-      minIndex= array[i]<array[minIndex] ?  i : minIndex;
+      minIndex = array[i] < array[minIndex] ? i : minIndex;
     }
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
@@ -98,7 +98,7 @@ BENCHMARK(findMinimumIndexSTL)->Range(8, nn);
 
 /*
  * Vectorized versions
- * First specific ones 
+ * First specific ones
  * later will try function
  * multiversioning
  */
@@ -176,8 +176,7 @@ findMinimumIndexAVX2(benchmark::State& state)
 }
 
 BENCHMARK(findMinimumIndexAVX2)->Range(8, nn);
-#endif//end if AVX2
-
+#endif // end if AVX2
 
 /*
  * SSE2/4.1 : 8 elements at time
@@ -241,7 +240,7 @@ BENCHMARK(findMinimumIndexSSE)->Range(8, nn);
 #endif // SSE2/4.1
 
 /*
- * Implementation of the abive but now 
+ * Implementation of the abive but now
  * using function multiversioning
  */
 #if defined(__ELF__) || defined(__SSE2__)
@@ -301,7 +300,7 @@ findMinimumIndexDispatch(benchmark::State& state)
 }
 #endif
 
-#if defined(__ELF__) || defined(__AVX2__)
+#if  defined(__AVX2__)
 __attribute__((target("avx2"))) static void
 findMinimumIndexDispatch(benchmark::State& state)
 {
@@ -375,8 +374,6 @@ findMinimumIndexDispatch(benchmark::State& state)
   }
 }
 BENCHMARK(findMinimumIndexDispatch)->Range(8, nn);
-//Done with multiversioning
-
+// Done with multiversioning
 
 BENCHMARK_MAIN();
-
