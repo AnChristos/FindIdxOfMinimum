@@ -287,7 +287,7 @@ findMinimumIndexSSEVec(benchmark::State& state)
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
-    const vec<float,4> increment = {8,8,8,8};
+    const vec<int,4> increment = {8,8,8,8};
     vec<int,4> indices1 = {0, 1, 2, 3};
     vec<int,4> indices2 = {4, 5, 6, 7};
     vec<int,4> minindices1 = indices1;
