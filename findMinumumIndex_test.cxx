@@ -1,8 +1,11 @@
 ﻿#include <algorithm>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <random>
-#include <stdlib.h>
-#include <string.h>
+#include <x86intrin.h>
+
+#include "vec.h"
 /*
  * Alignment of  64 bytes
  */
@@ -50,11 +53,11 @@ findMinimumIndexC()
       minIndex = i;
     }
   }
-  std::cout << "Minimum index :" << minIndex << " with value "
-            << array[minIndex] << std::endl;
+  std::cout << "C Minimum index : " << minIndex << " with value "
+            << array[minIndex] << '\n';
 }
 static void
-findMinimumIndexCNoVal()
+findMinimumIndexC2()
 {
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
   float minvalue = array[0];
@@ -65,8 +68,8 @@ findMinimumIndexCNoVal()
     }
   }
 
-  std::cout << "Minimum index :" << minIndex << " with value "
-            << array[minIndex] << std::endl;
+  std::cout << "C2 Minimum index : " << minIndex << " with value "
+            << array[minIndex] << '\n';
 }
 
 /*
@@ -78,56 +81,13 @@ findMinimumIndexSTL()
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
   size_t minIndex = std::distance(array, std::min_element(array, array + nn));
 
-  std::cout << "Minimum index :" << minIndex << std::endl;
+  std::cout << "STL Minimum index : " << minIndex << " with value "
+            << array[minIndex] << '\n';
 }
 typedef float vec4f __attribute__((vector_size(16)));
 typedef int vec4i __attribute__((vector_size(16)));
 
-static void
-findMinimumIndexVector_4()
-{
-
-  float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-
-  vec4i increment = { 4, 4, 4, 4 };
-  vec4i indices = { 0, 1, 2, 3 };
-  vec4i minindices = indices;
-  vec4f minvalues;
-  memcpy(&minvalues, array, sizeof(minvalues));
-
-  for (int i = 4; i < nn; i += 4) {
-    vec4f values;
-    memcpy(&values, array + i, sizeof(values));
-    indices = indices + increment;
-    vec4i lt = values < minvalues;
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER)
-    minindices = lt ? indices : minindices;
-    minvalues = lt ? values : minvalues;
-#else
-    for (int i = 0; i < 4; i++)
-      minindices[i] = lt[i] ? indices[i] : minindices[i];
-    for (int i = 0; i < 4; i++)
-      minvalues[i] = lt[i] ? values[i] : minvalues[i];
-#endif
-  }
-  /*
-   * do the final calculation scalar way
-   */
-  size_t minIndex = minindices[0];
-  float minvalue = minvalues[0];
-  for (size_t i = 1; i < 4; ++i) {
-    if (minvalues[i] < minvalue) {
-      minvalue = minvalues[i];
-      minIndex = minindices[i];
-    }
-  }
-  std::cout << "Minimum index :" << minIndex << " with value " << minvalue
-            << std::endl;
-}
-
 #if defined(__AVX2__)
-#warning( "AVX2" )
-#include <immintrin.h>
 /*
  * AVX2 : 8 elements at a time
  */
@@ -176,124 +136,74 @@ findMinimumIndexAVX2()
       minIndex = finalIndices[i];
     }
   }
-  std::cout << "Minimum index :" << minIndex << " with value " << minvalue
-            << std::endl;
+
+  std::cout << "AVX2 Minimum index : " << minIndex << " with value " << minvalue
+            << '\n';
 }
 
-#endif
+static void
+findMinimumIndexAVX2Vec()
+{
+
+  using namespace CxxUtils;
+  float* array = (float*)__builtin_assume_aligned(inArray, alignment);
+
+  const vec<int, 8> increment = { 8, 8, 8, 8, 8, 8, 8, 8 };
+  vec<int, 8> indicesIn = { 0, 1, 2, 3, 4, 5, 6, 7 };
+  vec<int, 8> minindices = { 0, 1, 2, 3, 4, 5, 6, 7 };
+  vec<float, 8> minvalues{};
+  vec<float, 8> values{};
+  vload(minvalues, array);
+  for (int i = 8; i < nn; i += 8) {
+    // Load next 8 elements
+    vload(values, array + i);
+    // increment the indices
+    indicesIn = indicesIn + increment;
+    // Get a mask indicating when an element is less than the ones we have
+    vec<int, 8> lt = values < minvalues;
+    // blend select the indices to update
+    vselect(minindices, indicesIn, minindices, lt);
+    vmin(minvalues, values, minvalues);
+  }
+  // Do the final calculation scalar way
+  int32_t minIndex = minindices[0];
+  float minDistance = minvalues[0];
+  for (int i = 1; i < 8; ++i) {
+    if (minvalues[i] < minDistance) {
+      minIndex = minindices[i];
+      minDistance = minvalues[i];
+    }
+  }
+
+  std::cout << "AVX2 (vec) Minimum index : " << minIndex << " with value " << minDistance
+            << '\n';
+}
+
+#endif // AVX2
 
 #if defined(__SSE4_1__) || defined(__SSE2__)
+/*
+ * check for blend
+ * as SSE2 does not have one
+ */
 #if defined(__SSE4_1__)
-#warning( "SSE4_1" )
-#include <smmintrin.h>
 const auto mm_blendv_epi8 = _mm_blendv_epi8;
-const auto mm_blendv_ps = _mm_blendv_ps;
 #elif defined(__SSE2__)
-#warning( "SSE2" )
-#include <emmintrin.h>
 static inline __m128i
 SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
 {
   return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
 }
-static inline __m128
-SSE2_mm_blendv_ps(__m128 a, __m128 b, __m128 mask)
-{
-  return _mm_or_ps(_mm_andnot_ps(mask, a), _mm_and_ps(mask, b));
-}
 const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
-const auto mm_blendv_ps = SSE2_mm_blendv_ps;
-#endif // on SSE4.1 vs SSE2
-/*
- * SSE2/4.1 : 4 elemets at a time
- */
-static void
-findMinimumIndexSSE_4()
-{
-
-  float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-  const __m128i increment = _mm_set1_epi32(4);
-  __m128i indices = _mm_setr_epi32(0, 1, 2, 3);
-  __m128i minindices = indices;
-  __m128 minvalues = _mm_load_ps(array);
-
-  for (int i = 4; i < nn; i += 4) {
-    const __m128 values = _mm_load_ps((array + i));
-    indices = _mm_add_epi32(indices, increment);
-    __m128i lt = _mm_castps_si128(_mm_cmplt_ps(values, minvalues));
-    minindices = mm_blendv_epi8(minindices, indices, lt);
-    minvalues = _mm_min_ps(values, minvalues);
-  }
-  /*
-   * do the final calculation scalar way
-   */
-  alignas(alignment) float finalValues[4];
-  alignas(alignment) int32_t finalIndices[4];
-  _mm_store_ps(finalValues, minvalues);
-  _mm_store_si128((__m128i*)finalIndices, minindices);
-
-  size_t minIndex = finalIndices[0];
-  float minvalue = finalValues[0];
-  for (size_t i = 1; i < 4; ++i) {
-    const float value = finalValues[i];
-    if (value < minvalue) {
-      minvalue = value;
-      minIndex = finalIndices[i];
-    }
-  }
-  std::cout << "Minimum index :" << minIndex << " with value " << minvalue
-            << std::endl;
-}
-
-/*
- * SSE2/4.1 : 4 elemets at a time. Avoid recomputation of min values
- */
-static void
-findMinimumIndexSSEBlendValues_4()
-{
-
-  float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-  const __m128i increment = _mm_set1_epi32(4);
-  __m128i indices = _mm_setr_epi32(0, 1, 2, 3);
-  __m128i minindices = indices;
-  __m128 minvalues = _mm_load_ps(array);
-
-  for (int i = 4; i < nn; i += 4) {
-    const __m128 values = _mm_load_ps((array + i));
-    indices = _mm_add_epi32(indices, increment);
-    __m128 lt = _mm_cmplt_ps(values, minvalues);
-    minindices = mm_blendv_epi8(minindices, indices, _mm_castps_si128(lt));
-    minvalues = mm_blendv_ps(minvalues, values, lt);
-  }
-  /*
-   * do the final calculation scalar way
-   */
-  alignas(alignment) float finalValues[4];
-  alignas(alignment) int32_t finalIndices[4];
-  _mm_store_ps(finalValues, minvalues);
-  _mm_store_si128((__m128i*)finalIndices, minindices);
-
-  size_t minIndex = finalIndices[0];
-  float minvalue = finalValues[0];
-  for (size_t i = 1; i < 4; ++i) {
-    const float value = finalValues[i];
-    if (value < minvalue) {
-      minvalue = value;
-      minIndex = finalIndices[i];
-    }
-  }
-  std::cout << "Minimum index :" << minIndex << " with value " << minvalue
-            << std::endl;
-}
-
+#endif // blend
 /*
  * SSE2/4.1 : 8 elements at time
  */
 static void
-findMinimumIndexSSE_8()
+findMinimumIndexSSE4()
 {
-  float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
+  float* array = (float*)__builtin_assume_aligned(inArray, alignment);
   const __m128i increment = _mm_set1_epi32(8);
   __m128i indices1 = _mm_setr_epi32(0, 1, 2, 3);
   __m128i indices2 = _mm_setr_epi32(4, 5, 6, 7);
@@ -337,24 +247,23 @@ findMinimumIndexSSE_8()
       minIndex = finalIndices[i];
     }
   }
-  std::cout << "Minimum index :" << minIndex << " with value " << minvalue
-            << std::endl;
-}
 
-#endif // AVX vs SSE2/4.1
+  std::cout << "SSE4 Minimum index : " << minIndex << " with value " << minvalue
+            << '\n';
+}
+#endif // SSE2/4.1
 
 int
 main()
 {
-  findMinimumIndexVector_4();
   findMinimumIndexC();
-  findMinimumIndexCNoVal();
+  findMinimumIndexC2();
   findMinimumIndexSTL();
-  findMinimumIndexSSE_4();
-  findMinimumIndexSSEBlendValues_4();
-  findMinimumIndexSSE_8();
+  findMinimumIndexSSE4();
 #if defined(__AVX2__)
   findMinimumIndexAVX2();
+  findMinimumIndexAVX2Vec();
+
 #endif
   return 0;
 }

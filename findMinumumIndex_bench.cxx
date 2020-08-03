@@ -1,10 +1,10 @@
-﻿#include <algorithm>
+﻿#include "vec.h"
+#include <algorithm>
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <cstring>
 #include <random>
 #include <x86intrin.h>
-#include "vec.h"
 /*
  * Alignment of  32 bytes
  */
@@ -103,21 +103,6 @@ BENCHMARK(findMinimumIndexSTL)->Range(8, nn);
  * later will try function
  * multiversioning
  */
-
-/*
- * check for blend
- * as SSE2 does not have one
- */
-#if defined(__SSE4_1__)
-const auto mm_blendv_epi8 = _mm_blendv_epi8;
-#elif defined(__SSE2__)
-static inline __m128i
-SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
-{
-  return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
-}
-const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
-#endif // blend
 
 #if defined(__AVX2__)
 /*
@@ -222,7 +207,21 @@ BENCHMARK(findMinimumIndexAVX2Vec)->Range(8, nn);
 /*
  * SSE2/4.1 : 8 elements at time
  */
-#if defined(__SSE2__)
+#if defined(__SSE4_1__) || defined(__SSE2__)
+/*
+ * check for blend
+ * as SSE2 does not have one
+ */
+#if defined(__SSE4_1__)
+const auto mm_blendv_epi8 = _mm_blendv_epi8;
+#elif defined(__SSE2__)
+static inline __m128i
+SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
+{
+  return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
+}
+const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
+#endif // blend
 static void
 findMinimumIndexSSE(benchmark::State& state)
 {
@@ -287,36 +286,36 @@ findMinimumIndexSSEVec(benchmark::State& state)
     const int n = state.range(0);
     float* array = (float*)__builtin_assume_aligned(inArray, alignment);
 
-    const vec<int,4> increment = {8,8,8,8};
-    vec<int,4> indices1 = {0, 1, 2, 3};
-    vec<int,4> indices2 = {4, 5, 6, 7};
-    vec<int,4> minindices1 = indices1;
-    vec<int,4> minindices2 = indices2;
+    const vec<int, 4> increment = { 8, 8, 8, 8 };
+    vec<int, 4> indices1 = { 0, 1, 2, 3 };
+    vec<int, 4> indices2 = { 4, 5, 6, 7 };
+    vec<int, 4> minindices1 = indices1;
+    vec<int, 4> minindices2 = indices2;
     vec<float, 4> minvalues1;
     vec<float, 4> minvalues2;
-    vload(minvalues1,array);
-    vload(minvalues2,array + 4);
+    vload(minvalues1, array);
+    vload(minvalues2, array + 4);
     vec<float, 4> values1;
     vec<float, 4> values2;
     for (int i = 8; i < n; i += 8) {
       // Load 8 elements at a time
-      vload(values1,array + i);     // first 4
-      vload(values2 ,array + i + 4); // second 4
+      vload(values1, array + i);     // first 4
+      vload(values2, array + i + 4); // second 4
       // 1
-      indices1 = indices1+ increment;
-      vec<int, 4>  lt1 = values1 < minvalues1;
+      indices1 = indices1 + increment;
+      vec<int, 4> lt1 = values1 < minvalues1;
       vselect(minindices1, indices1, minindices1, lt1);
       vmin(minvalues1, values1, minvalues1);
       // 2
-      indices2 = indices2+ increment;
-      vec<int, 4>  lt2 = values2 < minvalues2;
+      indices2 = indices2 + increment;
+      vec<int, 4> lt2 = values2 < minvalues2;
       vselect(minindices2, indices2, minindices2, lt2);
       vmin(minvalues2, values2, minvalues2);
     }
     // Compare //1 with //2
     vec<int, 4> lt = minvalues1 < minvalues2;
-    vselect (minindices1, minindices1, minindices2,lt);
-    vmin(minvalues1,minvalues1,minvalues2);
+    vselect(minindices1, minindices1, minindices2, lt);
+    vmin(minvalues1, minvalues1, minvalues2);
     /*
      * Do the final calculation scalar way
      */
@@ -336,6 +335,5 @@ findMinimumIndexSSEVec(benchmark::State& state)
 BENCHMARK(findMinimumIndexSSEVec)->Range(8, nn);
 
 #endif // SSE2/4.1
-
 
 BENCHMARK_MAIN();
