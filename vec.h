@@ -1,6 +1,6 @@
 /*
-* Copyright (C) 2002-2020 CERN for the benefit of the ATLAS collaboration.
-*/
+ * Copyright (C) 2002-2020 CERN for the benefit of the ATLAS collaboration.
+ */
 
 #ifndef TEST_VEC_H
 #define TEST_VEC_H
@@ -8,7 +8,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <type_traits>
-
+// Do we have the vector_size attribute for writing explicitly
+// vectorized code?
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__ICC) &&            \
+   !defined(__COVERITY__) &&                                                   \
+  !defined(__CUDACC__)
+#define HAVE_VECTOR_SIZE_ATTRIBUTE 1
+#else
+#define HAVE_VECTOR_SIZE_ATTRIBUTE 0
+#endif
 namespace CxxUtils {
 // Define a nice alias for a built-in vectorized type.
 template<typename T, size_t N>
