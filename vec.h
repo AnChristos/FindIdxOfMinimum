@@ -11,8 +11,7 @@
 // Do we have the vector_size attribute for writing explicitly
 // vectorized code?
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(__ICC) &&            \
-   !defined(__COVERITY__) &&                                                   \
-  !defined(__CUDACC__)
+  !defined(__COVERITY__) && !defined(__CUDACC__)
 #define HAVE_VECTOR_SIZE_ATTRIBUTE 1
 #else
 #define HAVE_VECTOR_SIZE_ATTRIBUTE 0
@@ -81,55 +80,61 @@ template<class VEC>
 /// Deduce the mask type for a vectorized type.
 using mask_type_t = typename mask_type<VEC>::type;
 
-/**
- * brief Copy a scalar to each element of a vectorized type.
- * Similar functionality to _mm_set/_mm_broadcast x86-64 intrinsics.
- */
 template<typename VEC, typename T>
 inline void
 vbroadcast(VEC& v, T x)
 {
+#if !HAVE_VECTOR_SIZE_ATTRIBUTE || WANT_VECTOR_FALLBACK
   // This may look inefficient, but the loop goes away when we
   // compile with optimization.
-  const size_t N = CxxUtils::vec_size<VEC>();
+  constexpr size_t N = CxxUtils::vec_size<VEC>();
   for (size_t i = 0; i < N; i++) {
     v[i] = x;
   }
+#else
+  // using  - to avoid sign conversions.
+  // using + adds  extra instructions due to float arithmetic.
+  v = x - VEC{ 0 };
+#endif
 }
 
 /*
- * @brief load elements from  memory address (C-array)
- * to a vectorized type. Similar to _mm_load intrinsics
+ * @brief load elements from  memory address src (C-array)
+ * to a vectorized type dst.
+ * Used memcpy to avoid alignment issues
  */
 template<typename VEC>
 inline void
-vload(VEC& dst, vec_type_t<VEC>* mem_addr)
+vload(VEC& dst, vec_type_t<VEC> const* src)
 {
-  std::memcpy(&dst, mem_addr, sizeof(VEC));
+  std::memcpy(&dst, src, sizeof(VEC));
 }
 
 /*
- * @brief load elements from a vectorized type to
- * a memory address (C-array).
- * Similar to _mm_store intrinsics
+ * @brief store elements from a vectorized type src to
+ * to a memory address dst (C-array).
+ * Uses memcpy to avoid alignment issue
  */
 template<typename VEC>
 inline void
-vstore(vec_type_t<VEC>* mem_addr, VEC& src)
+vstore(vec_type_t<VEC>* dst, const VEC& src)
 {
-  std::memcpy(mem_addr, &src, sizeof(VEC));
+  std::memcpy(dst, &src, sizeof(VEC));
 }
 
 /*
  * @brief select/blend function.
- * Similar _mm_blend X86-64 intrinsics
+ * Fill dst according to
+ * dst[i] = mask[i] ? a[i] : b[i]
  */
 template<typename VEC>
 inline void
 vselect(VEC& dst, const VEC& a, const VEC& b, const mask_type_t<VEC>& mask)
 {
-#if (defined(__clang__) && (__clang_major__ < 10)) ||                          \
-  !HAVE_VECTOR_SIZE_ATTRIBUTE || WANT_VECTOR_FALLBACK
+// clang supports the ternary operator (:?)for GCC vector types
+// only for llvm version 10 and above.
+#if (defined(__clang__) && ((__clang_major__ < 10) || defined(__APPLE__))) ||  \
+  !HAVE_VECTOR_SIZE_ATTRIBUTE
   constexpr size_t N = vec_size<VEC>();
   for (size_t i = 0; i < N; i++) {
     dst[i] = mask[i] ? a[i] : b[i];
@@ -141,14 +146,14 @@ vselect(VEC& dst, const VEC& a, const VEC& b, const mask_type_t<VEC>& mask)
 
 /*
  * @brief vectorized min.
- * Similar to _mm_min intrinsics
+ * copies to @c dst[i]  the min(a[i],b[i])
  */
 template<typename VEC>
 inline void
 vmin(VEC& dst, const VEC& a, const VEC& b)
 {
-#if (defined(__clang__) && (__clang_major__ < 10)) ||                          \
-  !HAVE_VECTOR_SIZE_ATTRIBUTE || WANT_VECTOR_FALLBACK
+#if (defined(__clang__) && ((__clang_major__ < 10) || defined(__APPLE__))) ||  \
+  !HAVE_VECTOR_SIZE_ATTRIBUTE
   constexpr size_t N = vec_size<VEC>();
   for (size_t i = 0; i < N; i++) {
     dst[i] = a[i] < b[i] ? a[i] : b[i];
@@ -158,6 +163,45 @@ vmin(VEC& dst, const VEC& a, const VEC& b)
 #endif
 }
 
-} // namespace CxxUtils
+/*
+ * @brief vectorized max.
+ * copies to @c dst[i]  the max(a[i],b[i])
+ */
+template<typename VEC>
+inline void
+vmax(VEC& dst, const VEC& a, const VEC& b)
+{
+#if (defined(__clang__) && ((__clang_major__ < 10) || defined(__APPLE__))) ||  \
+  !HAVE_VECTOR_SIZE_ATTRIBUTE
+  constexpr size_t N = vec_size<VEC>();
+  for (size_t i = 0; i < N; i++) {
+    dst[i] = a[i] > b[i] ? a[i] : b[i];
+  }
+#else
+  dst = a > b ? a : b;
+#endif
+}
+
+/**
+ * @brief vpermute function.
+ * move any element of a vector src into any or multiple position inside dst,
+ * Follows the GCC __builtin_shuffle(vec,mask) conventions,
+ * therefore the elements of mask are considered modulo N
+ */
+template<typename VEC>
+inline void
+vpermute(VEC& dst, const VEC& src, const mask_type_t<VEC>& mask)
+{
+#if defined(__clang__) || !HAVE_VECTOR_SIZE_ATTRIBUTE
+  // clang can vectorize this at O2
+  constexpr size_t N = vec_size<VEC>();
+  for (size_t i = 0; i < N; ++i) {
+    dst[i] = src[mask[i] % N];
+  }
+#else // gcc
+  dst = __builtin_shuffle(src, mask);
+#endif
+}
+}
 
 #endif

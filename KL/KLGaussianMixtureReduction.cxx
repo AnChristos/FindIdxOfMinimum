@@ -385,8 +385,7 @@ findMerges(componentPtrRestrict componentsIn,
   const int32_t n = inputSize;
   const int32_t nn = n * (n - 1) / 2;
   // Create a trianular mapping for the pairwise distances
-  std::vector<triangularToIJ> convert;
-  convert.reserve(nn);
+  std::vector<triangularToIJ> convert(nn);
   for (int32_t i = 1; i < n; ++i) {
     const int indexConst = (i - 1) * i / 2;
     for (int32_t j = 0; j < i; ++j) {

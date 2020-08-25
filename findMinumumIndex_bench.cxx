@@ -1,5 +1,5 @@
-﻿#include "vec.h"
-#include <algorithm>
+﻿#include <algorithm>
+#include "vec.h"
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <cstring>
