@@ -46,7 +46,7 @@ findMinimumIndexC()
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
   float minvalue = array[0];
   size_t minIndex = 0;
-  for (int i = 0; i < nn; ++i) {
+  for (size_t i = 0; i < nn; ++i) {
     const float value = array[i];
     if (value < minvalue) {
       minvalue = value;
@@ -60,9 +60,8 @@ static void
 findMinimumIndexC2()
 {
   float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-  float minvalue = array[0];
   size_t minIndex = 0;
-  for (int i = 0; i < nn; ++i) {
+  for (size_t i = 0; i < nn; ++i) {
     if (array[i] < array[minIndex]) {
       minIndex = i;
     }
@@ -212,7 +211,7 @@ findMinimumIndexSSE4()
   __m128 minvalues1 = _mm_load_ps(array);
   __m128 minvalues2 = _mm_load_ps(array + 4);
 
-  for (int i = 8; i < nn; i += 8) {
+  for (size_t i = 8; i < nn; i += 8) {
     // Load 8 elements at a time
     const __m128 values1 = _mm_load_ps(array + i);     // first 4
     const __m128 values2 = _mm_load_ps(array + i + 4); // second 4
