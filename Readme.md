@@ -11,24 +11,14 @@ Assuming you want also the google bench mark code
 
 ``source buildGoogleBenchmark.sh``
 
-# Run the test
-Sanity test to see things working
-
-``source build_test.sh ``
-
-``./findMinimumIndex_test`` 
-
-# Run the benchmark
-
-``source buildBench.sh`` 
-
-``./findMinimumIndex_bench``
+else
+``git clone https://github.com/AnChristos/FindMinimumIndex.git``
 
 #CMake
 
 ``mkdir build; cd build``
 ``cmake ../``
-``cmake``
+``make``
 ``./findMinimumIndex_bench``
 
 # What is included so far

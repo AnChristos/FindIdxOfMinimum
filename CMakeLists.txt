@@ -3,18 +3,15 @@ cmake_minimum_required(VERSION 3.10)
 # set the project name and version
 project(findMinumumIndex-SIMD VERSION 1.0)
 
-# C++ setting 
+
+
+# C++ setting
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-add_compile_options(-Wall -Wextra -pedantic -Werror -O2)
+add_compile_options(-Wall -Wextra -pedantic -Werror  -O2 -g)
 
-#google benchmark 
-FIND_LIBRARY(GBENCH_LIB NAMES "benchmark"
-	PATHS ${PROJECT_SOURCE_DIR}/benchmark/build/src )
-
-FIND_PATH(GBENCH_INCL NAMES "benchmark"
-	PATHS ${PROJECT_SOURCE_DIR}/benchmark/include )
-
+list(APPEND CMAKE_PREFIX_PATH $ENV{HOME}/.local/)
+find_package(benchmark REQUIRED)
 find_package (Threads)
 
 add_executable(findMinumumIndex_test 
@@ -23,7 +20,6 @@ add_executable(findMinumumIndex_test
 add_executable(findMinumumIndex_bench 
 	       findMinumumIndex_bench.cxx)
 
-target_link_libraries(findMinumumIndex_bench PRIVATE "${GBENCH_LIB}")
-target_include_directories(findMinumumIndex_bench PRIVATE "${GBENCH_INCL}")
-target_link_libraries (findMinumumIndex_bench  PRIVATE "${CMAKE_THREAD_LIBS_INIT}")
+target_link_libraries(findMinumumIndex_bench  benchmark::benchmark)
+target_link_libraries (findMinumumIndex_bench  benchmark::benchmark)
 
