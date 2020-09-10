@@ -1,6 +1,5 @@
 # FindMinimumIndex-SIMD
-Playground for using SIMD for the magnetic field cache interpolation
-
+Playground for using SIMD for calculating the Index of the minimum in a array of floats.
 # First clone/install
 
 Assuming you want also the google bench mark code
