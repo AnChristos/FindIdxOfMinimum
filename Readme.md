@@ -11,9 +11,10 @@ Assuming you want also the google bench mark code
 ``source buildGoogleBenchmark.sh``
 
 else
+
 ``git clone https://github.com/AnChristos/FindMinimumIndex.git``
 
-#CMake
+# Installation via CMake 
 
 ``mkdir build; cd build``
 ``cmake ../``
