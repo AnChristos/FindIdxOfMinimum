@@ -1,6 +1,7 @@
 # FindMinimumIndex-SIMD
 Playground for using SIMD for calculating the Index of the minimum in a array of floats.
-# First clone/install
+
+# Clone
 
 Assuming you want also the google bench mark code
 
