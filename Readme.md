@@ -15,11 +15,11 @@ else
 
 ``git clone https://github.com/AnChristos/FindMinimumIndex.git``
 
-# Installation via CMake 
+# Build with CMake 
 
 ``mkdir build; cd build``
 
-``cmake ../``
+``cmake ../FindMinimumIndex``
 
 ``make``
 
