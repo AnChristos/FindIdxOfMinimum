@@ -17,8 +17,11 @@ else
 # Installation via CMake 
 
 ``mkdir build; cd build``
+
 ``cmake ../``
+
 ``make``
+
 ``./findMinimumIndex_bench``
 
 # What is included so far
