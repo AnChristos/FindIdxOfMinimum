@@ -21,5 +21,4 @@ add_executable(findMinumumIndex_bench
 	       findMinumumIndex_bench.cxx)
 
 target_link_libraries(findMinumumIndex_bench  benchmark::benchmark)
-target_link_libraries (findMinumumIndex_bench  benchmark::benchmark)
 
