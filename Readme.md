@@ -1,4 +1,4 @@
-# FindMinimumIndex-SIMD
+# FindMinimumIndex
 Playground for using SIMD for calculating the Index of the minimum in a array of floats.
 
 # Clone
@@ -7,7 +7,7 @@ Assuming you want also the google bench mark code
 
 ``git clone --recursive https://github.com/AnChristos/FindMinimumIndex.git``
 
-``cd  cd findMinimumIndex-SIMD/``
+``cd findMinimumIndex/``
 
 
 The following Will install the benchmark under /user/.local
