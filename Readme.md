@@ -1,7 +1,13 @@
 # FindMinimumIndex
 Playground for using SIMD for calculating the Index of the minimum in a array of floats.
 
-# Clone
+# If you have already google benchmark installed
+
+``git clone https://github.com/AnChristos/FindMinimumIndex.git``
+
+# Also install google benchmark 
+
+Assuming you want also the google bench mark code
 
 Assuming you want also the google bench mark code
 
@@ -20,9 +26,6 @@ edit
 
 to change location
 
-else if you have already the google benchmark installed 
-
-``git clone https://github.com/AnChristos/FindMinimumIndex.git``
 
 # Build with CMake 
 
