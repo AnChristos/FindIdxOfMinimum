@@ -1,31 +1,18 @@
 # FindMinimumIndex
+
 Playground for using SIMD for calculating the Index of the minimum in a array of floats.
 
-# If you have already google benchmark installed
+# If you do not have already google benchmark installed
 
-``git clone https://github.com/AnChristos/FindMinimumIndex.git``
+``git clone https://github.com/google/benchmark.git``
 
-# Also install google benchmark 
-
-Assuming you want also the google bench mark code
-
-
-``git clone --recursive https://github.com/AnChristos/FindMinimumIndex.git``
-
-``cd findMinimumIndex/``
-
-The following will install the benchmark under `${HOME}/.local`
+The following script from this repo will install the benchmark under ``${HOME}/.local``
 
 ``source buildGoogleBenchmark.sh``
 
-edit
+# Build FindMinimumIndex 
 
-``cmake -DCMAKE_BUILD_TYPE=Release -DBENCHMARK_ENABLE_GTEST_TESTS=OFF -DCMAKE_INSTALL_PREFIX=${HOME}/.local ../ ``
-
-to change location
-
-
-# Build with CMake 
+``git clone https://github.com/AnChristos/FindMinimumIndex.git``
 
 ``mkdir build; cd build``
 
