@@ -4,12 +4,13 @@
 #include <algorithm>
 
 inline int32_t
-findMinIndexC(const float* distancesIn, const int n)
+findMinIndexC(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
   float minvalue = array[0];
   int minIndex = 0;
+  n &= -8;
   for (int i = 0; i < n; ++i) {
     const float value = array[i];
     if (value < minvalue) {
@@ -21,11 +22,12 @@ findMinIndexC(const float* distancesIn, const int n)
 }
 
 inline int32_t
-findMinIndexC2(const float* distancesIn, const int n)
+findMinIndexC2(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
   int minIndex = 0;
+  n &= -8;
   for (int i = 0; i < n; ++i) {
     minIndex = array[i] < array[minIndex] ? i : minIndex;
   }
@@ -33,15 +35,16 @@ findMinIndexC2(const float* distancesIn, const int n)
 }
 
 inline int32_t
-findMinIndexSTL(const float* distancesIn, int32_t n)
+findMinIndexSTL(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  n &= -8;
   return std::distance(array, std::min_element(array, array + n));
 }
 
 inline int32_t
-findMinIndexVec(const float* distancesIn, const int n)
+findMinIndexVec(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   using namespace CxxUtils;
