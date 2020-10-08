@@ -1,14 +1,7 @@
-﻿#include <algorithm>
-#include "vec.h"
+﻿#include "findMinimumIndex.h"
 #include <benchmark/benchmark.h>
-#include <cstdlib>
-#include <cstring>
+#include <algorithm>
 #include <random>
-#include <x86intrin.h>
-/*
- * Alignment of  32 bytes
- */
-constexpr int alignment = 32;
 /*
  * create global data
  * a bit hacky way
@@ -20,6 +13,7 @@ class InitArray
 public:
   InitArray()
   {
+    constexpr int alignment = 32;
     std::mt19937 gen;
     std::uniform_real_distribution<> dis(1.0, 10.0);
     // create buffer of right size,properly aligned
@@ -47,16 +41,7 @@ findMinimumIndexC(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-    float minvalue = array[0];
-    int minIndex = 0;
-    for (int i = 0; i < n; ++i) {
-      const float value = array[i];
-      if (value < minvalue) {
-        minvalue = value;
-        minIndex = i;
-      }
-    }
+    int32_t minIndex = findMinIndexC(inArray, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
@@ -71,11 +56,7 @@ findMinimumIndexC2(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-    int minIndex = 0;
-    for (int i = 0; i < n; ++i) {
-      minIndex = array[i] < array[minIndex] ? i : minIndex;
-    }
+    int32_t minIndex = findMinIndexC2(inArray, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
@@ -89,251 +70,23 @@ findMinimumIndexSTL(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-    size_t minIndex = std::distance(array, std::min_element(array, array + n));
+    int32_t minIndex = findMinIndexSTL(inArray, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
 }
 BENCHMARK(findMinimumIndexSTL)->Range(8, nn);
 
-/*
- * Vectorized versions
- * First specific ones
- * later will try function
- * multiversioning
- */
-
-#if defined(__AVX2__)
-/*
- * AVX2 : 8 elements at a time
- */
 static void
-findMinimumIndexAVX2(benchmark::State& state)
+findMinimumIndexVec(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-
-    const __m256i increment = _mm256_set1_epi32(8);
-    __m256i indices = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
-    __m256i minindices = indices;
-    __m256 minvalues = _mm256_load_ps(array);
-
-    for (int i = 8; i < n; i += 8) {
-      /*
-       * Load next 8 elements
-       */
-      const __m256 values = _mm256_load_ps(array + i);
-      /*
-       * increment the indices
-       */
-      indices = _mm256_add_epi32(indices, increment);
-      /*
-       * Get a mask indicating when an element is less than the ones we have
-       */
-      __m256i lt =
-        _mm256_castps_si256(_mm256_cmp_ps(values, minvalues, _CMP_LT_OS));
-      /*
-       * blend select the indices to update
-       */
-      minindices = _mm256_blendv_epi8(minindices, indices, lt);
-      minvalues = _mm256_min_ps(values, minvalues);
-    }
-    /*
-     * Do the final calculation scalar way
-     */
-    alignas(alignment) float finalValues[8];
-    alignas(alignment) int32_t finalIndices[8];
-    _mm256_store_ps(finalValues, minvalues);
-    _mm256_store_si256((__m256i*)(finalIndices), minindices);
-    size_t minIndex = finalIndices[0];
-    float minvalue = finalValues[0];
-    for (size_t i = 1; i < 8; ++i) {
-      const float value = finalValues[i];
-      if (value < minvalue) {
-        minvalue = value;
-        minIndex = finalIndices[i];
-      }
-    }
+    int32_t minIndex = findMinIndexVec(inArray, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
 }
 
-BENCHMARK(findMinimumIndexAVX2)->Range(8, nn);
-
-// vec Impl
-static void
-findMinimumIndexAVX2Vec(benchmark::State& state)
-{
-  using namespace CxxUtils;
-  for (auto _ : state) {
-    const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-
-    const vec<int, 8> increment = { 8, 8, 8, 8, 8, 8, 8, 8 };
-    vec<int, 8> indicesIn = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    vec<int, 8> minindices = { 0, 1, 2, 3, 4, 5, 6, 7 };
-    vec<float, 8> minvalues{};
-    vec<float, 8> values{};
-    vload(minvalues, array);
-    for (int i = 8; i < n; i += 8) {
-      // Load next 8 elements
-      vload(values, array + i);
-      // increment the indices
-      indicesIn = indicesIn + increment;
-      // Get a mask indicating when an element is less than the ones we have
-      vec<int, 8> lt = values < minvalues;
-      // blend select the indices to update
-      vselect(minindices, indicesIn, minindices, lt);
-      vmin(minvalues, values, minvalues);
-    }
-    // Do the final calculation scalar way
-    int32_t minIndex = minindices[0];
-    float minDistance = minvalues[0];
-    for (int i = 1; i < 8; ++i) {
-      if (minvalues[i] < minDistance) {
-        minIndex = minindices[i];
-        minDistance = minvalues[i];
-      }
-    }
-    benchmark::DoNotOptimize(&minIndex);
-    benchmark::ClobberMemory();
-  }
-}
-BENCHMARK(findMinimumIndexAVX2Vec)->Range(8, nn);
-#endif // end if AVX2
-/*
- * SSE2/4.1 : 8 elements at time
- */
-#if defined(__SSE4_1__) || defined(__SSE2__)
-/*
- * check for blend
- * as SSE2 does not have one
- */
-#if defined(__SSE4_1__)
-const auto mm_blendv_epi8 = _mm_blendv_epi8;
-#elif defined(__SSE2__)
-static inline __m128i
-SSE2_mm_blendv_epi8(__m128i a, __m128i b, __m128i mask)
-{
-  return _mm_or_si128(_mm_andnot_si128(mask, a), _mm_and_si128(mask, b));
-}
-const auto mm_blendv_epi8 = SSE2_mm_blendv_epi8;
-#endif // blend
-static void
-findMinimumIndexSSE(benchmark::State& state)
-{
-  for (auto _ : state) {
-    const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-
-    const __m128i increment = _mm_set1_epi32(8);
-    __m128i indices1 = _mm_setr_epi32(0, 1, 2, 3);
-    __m128i indices2 = _mm_setr_epi32(4, 5, 6, 7);
-    __m128i minindices1 = indices1;
-    __m128i minindices2 = indices2;
-    __m128 minvalues1 = _mm_load_ps(array);
-    __m128 minvalues2 = _mm_load_ps(array + 4);
-
-    for (int i = 8; i < n; i += 8) {
-      // Load 8 elements at a time
-      const __m128 values1 = _mm_load_ps(array + i);     // first 4
-      const __m128 values2 = _mm_load_ps(array + i + 4); // second 4
-      // 1
-      indices1 = _mm_add_epi32(indices1, increment);
-      __m128i lt1 = _mm_castps_si128(_mm_cmplt_ps(values1, minvalues1));
-      minindices1 = mm_blendv_epi8(minindices1, indices1, lt1);
-      minvalues1 = _mm_min_ps(values1, minvalues1);
-      // 2
-      indices2 = _mm_add_epi32(indices2, increment);
-      __m128i lt2 = _mm_castps_si128(_mm_cmplt_ps(values2, minvalues2));
-      minindices2 = mm_blendv_epi8(minindices2, indices2, lt2);
-      minvalues2 = _mm_min_ps(values2, minvalues2);
-    }
-    // Compare //1 with //2
-    __m128i lt = _mm_castps_si128(_mm_cmplt_ps(minvalues1, minvalues2));
-    minindices1 = mm_blendv_epi8(minindices2, minindices1, lt);
-    minvalues1 = _mm_min_ps(minvalues2, minvalues1);
-    /*
-     * Do the final calculation scalar way
-     */
-    alignas(alignment) float finalValues[4];
-    alignas(alignment) int32_t finalIndices[4];
-    _mm_store_ps(finalValues, minvalues1);
-    _mm_store_si128((__m128i*)(finalIndices), minindices1);
-    size_t minIndex = finalIndices[0];
-    float minvalue = finalValues[0];
-    for (size_t i = 1; i < 4; ++i) {
-      const float value = finalValues[i];
-      if (value < minvalue) {
-        minvalue = value;
-        minIndex = finalIndices[i];
-      }
-    }
-    benchmark::DoNotOptimize(&minIndex);
-    benchmark::ClobberMemory();
-  }
-}
-BENCHMARK(findMinimumIndexSSE)->Range(8, nn);
-
-static void
-findMinimumIndexSSEVec(benchmark::State& state)
-{
-  using namespace CxxUtils;
-  for (auto _ : state) {
-    const int n = state.range(0);
-    float* array = (float*)__builtin_assume_aligned(inArray, alignment);
-
-    const vec<int, 4> increment = { 8, 8, 8, 8 };
-    vec<int, 4> indices1 = { 0, 1, 2, 3 };
-    vec<int, 4> indices2 = { 4, 5, 6, 7 };
-    vec<int, 4> minindices1 = indices1;
-    vec<int, 4> minindices2 = indices2;
-    vec<float, 4> minvalues1;
-    vec<float, 4> minvalues2;
-    vload(minvalues1, array);
-    vload(minvalues2, array + 4);
-    vec<float, 4> values1;
-    vec<float, 4> values2;
-    for (int i = 8; i < n; i += 8) {
-      // Load 8 elements at a time
-      vload(values1, array + i);     // first 4
-      vload(values2, array + i + 4); // second 4
-      // 1
-      indices1 = indices1 + increment;
-      vec<int, 4> lt1 = values1 < minvalues1;
-      vselect(minindices1, indices1, minindices1, lt1);
-      vmin(minvalues1, values1, minvalues1);
-      // 2
-      indices2 = indices2 + increment;
-      vec<int, 4> lt2 = values2 < minvalues2;
-      vselect(minindices2, indices2, minindices2, lt2);
-      vmin(minvalues2, values2, minvalues2);
-    }
-    // Compare //1 with //2
-    vec<int, 4> lt = minvalues1 < minvalues2;
-    vselect(minindices1, minindices1, minindices2, lt);
-    vmin(minvalues1, minvalues1, minvalues2);
-    /*
-     * Do the final calculation scalar way
-     */
-    size_t minIndex = minindices1[0];
-    float minvalue = minvalues1[0];
-    for (size_t i = 1; i < 4; ++i) {
-      const float value = minvalues1[i];
-      if (value < minvalue) {
-        minvalue = value;
-        minIndex = minindices1[i];
-      }
-    }
-    benchmark::DoNotOptimize(&minIndex);
-    benchmark::ClobberMemory();
-  }
-}
-BENCHMARK(findMinimumIndexSSEVec)->Range(8, nn);
-
-#endif // SSE2/4.1
-
+BENCHMARK(findMinimumIndexVec)->Range(8, nn);
 BENCHMARK_MAIN();

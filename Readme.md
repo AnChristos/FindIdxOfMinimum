@@ -22,10 +22,3 @@ The following script from this repo will install the benchmark under ``${HOME}/.
 
 ``./findMinimumIndex_bench --benchmark_report_aggregates_only=true --benchmark_repetitions=20``
 
-# What is included so far
-
-- "C" style (2 variations)
-- "STL" style
-- Using SSE intrinsics
-- Using AVX2 intrinsics
-- Using SSE/AVX2 via compiler vector extension
