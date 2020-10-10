@@ -6,7 +6,8 @@
  * create global data
  * a bit hacky way
  */
-constexpr size_t nn = 8 << 10;
+constexpr size_t nstart=256;
+constexpr size_t nn = 16 << 9;
 float* inArray;
 class InitArray
 {
@@ -46,7 +47,7 @@ findMinimumIndexC(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexC)->Range(8, nn);
+BENCHMARK(findMinimumIndexC)->RangeMultiplier(8)->Range(nstart, nn);
 
 /*
  * C style 2
@@ -61,7 +62,7 @@ findMinimumIndexC2(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexC2)->Range(8, nn);
+BENCHMARK(findMinimumIndexC2)->RangeMultiplier(8)->Range(nstart, nn);
 /*
  * Use STL
  */
@@ -75,7 +76,7 @@ findMinimumIndexSTL(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexSTL)->Range(8, nn);
+BENCHMARK(findMinimumIndexSTL)->RangeMultiplier(8)->Range(nstart, nn);
 
 static void
 findMinimumIndexVec(benchmark::State& state)
@@ -88,5 +89,20 @@ findMinimumIndexVec(benchmark::State& state)
   }
 }
 
-BENCHMARK(findMinimumIndexVec)->Range(8, nn);
+BENCHMARK(findMinimumIndexVec)->RangeMultiplier(8)->Range(nstart, nn);
+
+static void
+findMinimumIndexVec16(benchmark::State& state)
+{
+  for (auto _ : state) {
+    const int n = state.range(0);
+    int32_t minIndex = findMinIndexVec16(inArray, n);
+    benchmark::DoNotOptimize(&minIndex);
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK(findMinimumIndexVec16)->RangeMultiplier(8)->Range(nstart, nn);
+
+
 BENCHMARK_MAIN();

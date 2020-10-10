@@ -11,7 +11,7 @@ constexpr int alignment = 64;
  * create global data
  * a bit hacky way
  */
-constexpr size_t n = 8 << 10;
+constexpr size_t n = 16 << 8;
 float* array;
 class InitArray
 {
@@ -19,7 +19,7 @@ public:
   InitArray()
   {
     std::mt19937 gen;
-    std::uniform_real_distribution<> dis(1.0, 10.0);
+    std::uniform_real_distribution<> dis(0.1, 100.0);
     // create buffer of right size,properly aligned
     size_t const size = n * sizeof(float);
     posix_memalign((void**)&array, alignment, size);
@@ -69,6 +69,14 @@ findMinimumIndexVec()
   std::cout << "Vec Minimum index : " << minIndex << " with value " << array[minIndex]
             << '\n';
 }
+static void
+findMinimumIndexVec16()
+{
+  int32_t minIndex = findMinIndexVec16(array, n);
+  std::cout << "Vec Minimum index : " << minIndex << " with value " << array[minIndex]
+            << '\n';
+}
+
 
 int main()
 {
@@ -76,5 +84,6 @@ int main()
   findMinimumIndexC2();
   findMinimumIndexSTL();
   findMinimumIndexVec();
+  findMinimumIndexVec16();
   return 0;
 }
