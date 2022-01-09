@@ -1,5 +1,6 @@
+// This file's extension implies that it's C, but it's really -*- C++ -*-.
 /*
- * Copyright (C) 2002-2020 CERN for the benefit of the ATLAS collaboration.
+ * Copyright (C) 2002-2021 CERN for the benefit of the ATLAS collaboration.
  */
 /**
  * @file CxxUtils/vec.h
@@ -22,21 +23,21 @@
  * @c N is the number of elements in the vector; it should be a power of 2.
  * This will either be a built-in vector type if the @c vector_size
  * attribute is supported or a fallback C++ class intended to be
- * (mostly) functionally equivalent.
+ * (mostly) functionally equivalent (see vec_fb.h)
  *
  *
  * The GCC, clang and fallback vector types support:
  * ++, --, +,-,*,/,%, =, &,|,^,~, >>,<<, !, &&, ||,
  * ==, !=, >, <, >=, <=, =, sizeof and Initialization from brace-enclosed lists
  *
- * Furthemore the GCC and clang>=10 vector types support the ternary operator.
+ * Furthemore the GCC and clang vector types support the ternary operator.
  *
  * We also support some additional operations.
  *
  * Deducing useful types:
  *
  *  - @c CxxUtils::vec_type_t<VEC> is the element type of @c VEC.
- *  - @c CxxUtils::mask_type_t<VEC> is the vector type return by relational
+ *  - @c CxxUtils::vec_mask_type_t<VEC> is the vector type return by relational
  *                                  operations.
  *
  * Deducing the num of elements in a vectorized type:
@@ -55,33 +56,44 @@
  *                                          stores elements from @c src
  *                                          to @c dst
  *  - @c CxxUtils::vselect (VEC& dst, const VEC& a, const VEC& b, const
- *                          mask_type_t<VEC>& mask) copies elements
+ *                          vec_mask_type_t<VEC>& mask) copies elements
  *                          from @c a or @c b, depending
  *                          on the value of @c  mask to @c dst.
  *                          dst[i] = mask[i] ? a[i] : b[i]
- *  - @c CxxUtils::vmin     (VEC& dst, const VEC& a, const VEC& b)
+ *  - @c CxxUtils::vmin    (VEC& dst, const VEC& a, const VEC& b)
  *                         copies to @c dst[i]  the min(a[i],b[i])
  *  - @c CxxUtils::vmax    (VEC& dst, const VEC& a, const VEC& b)
  *                         copies to @c dst[i]  the max(a[i],b[i])
+ *  - @c CxxUtils::vconvert (VEC1& dst, const VEC2& src)
+ *                          Fills @c dst with the result  of a
+ *                          static_cast of every element of @c src
+ *                          to the element type of dst.
+ *                          dst[i] = static_cast<vec_type_t<VEC1>>(src[i])
+ *
+ *  Functions that construct a permutation of elements from one or two vectors
+ *  and return a vector of the same type as the input vector(s).
+ *  The mask has the same element count  as the vectors.
+ *  Intentionally kept compatible with gcc's _builtin_shuffle.
+ *  If we move to gcc>=12 we could unify with clang's _builtin_shuffle_vector
+ *  and relax some of these requirements
+ *
  *  - @c CxxUtils::vpermute<mask> (VEC& dst, const VEC& src)
  *                          Fills dst with permutation of src
  *                          according to mask.
- *                          Mask is a list of integers that specifies the elements
- *                          that should be extracted and returned in src.
- *                          dst[i] = src[mask[i]] where mask[i] is the ith integer
- *                          in the mask.
- *  - @c CxxUtils::vblend<mask> (VEC& dst, const VEC& src1,const VEC& src2)
- *                          Fills dst with permutation of src1 and src2
- *                          according to mask.
- *                          Mask is a list of integers that specifies the elements
- *                          that should be extracted and returned in src1 and src2.
- *                          An index i in the interval [0,N) indicates that element number i 
- *                          from the first input vector should be placed in the
- *                          corresponding position in the result vector.  
- *                          An index in the interval [N,2N)
- *                          indicates that the element number i-N
- *                          from the second input vector should be placed 
- *                          in the corresponding position in the result vector.
+ *                          @c mask is a list of integers that specifies the
+ * elements that should be extracted and returned in @c src. dst[i] =
+ * src[mask[i]] where mask[i] is the ith integer in the @c mask.
+ *
+ *  - @c CxxUtils::vpermute2<mask> (VEC& dst, const VEC& src1,const VEC& src2)
+ *                          Fills @c dst with permutation of @c src1 and @c src2
+ *                          according to @c mask.
+ *                          @c mask is a list of integers that specifies the
+ * elements that should be extracted from @c src1 and @c src2. An index i in the
+ * interval [0,N) indicates that element number i from the first input vector
+ * should be placed in the corresponding position in the result vector. An index
+ * in the interval [N,2N) indicates that the element number i-N from the second
+ * input vector should be placed in the corresponding position in the result
+ * vector.
  *
  * In terms of expected performance it might be  advantageous to
  * use vector types that fit the size of the ISA.
@@ -97,25 +109,30 @@
 #ifndef CXXUTILS_VEC_H
 #define CXXUTILS_VEC_H
 
-#include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <initializer_list>
 #include <type_traits>
-
-// Do we additionally support the ternary operator for vectorizes types.
-// GCC and llvm clang >=10
-#if !(defined(__clang__) && ((__clang_major__ < 10) || defined(__APPLE__)))
-#define HAVE_VECTOR_TERNARY_OPERATOR 1
-#else
-#define HAVE_VECTOR_TERNARY_OPERATOR 0
-#endif
 
 namespace CxxUtils {
 
-/// Define a nice alias for a built-in vectorized type.
+/**
+ * @brief check the type and the size  of the vector.
+ * Choose between the built-in (if available or
+ * fallback type.
+ */
 template<typename T, size_t N>
-using vec __attribute__((vector_size(N * sizeof(T)))) = T;
+struct vec_typedef
+{
+  static_assert((N & (N - 1)) == 0, "N must be a power of 2.");
+  static_assert(std::is_arithmetic_v<T>, "T not an arithmetic type");
+  using type __attribute__((vector_size(N * sizeof(T)))) = T;
+};
+
+/**
+ * @brief Define a nice alias for the vectorized type
+ */
+template<typename T, size_t N>
+using vec = typename vec_typedef<T, N>::type;
 
 /**
  * @brief Deduce the element type from a vectorized type.
@@ -123,21 +140,28 @@ using vec __attribute__((vector_size(N * sizeof(T)))) = T;
 template<class VEC>
 struct vec_type
 {
+  // Requires c++20.
+  // typedef typename std::invoke_result< decltype([](const VEC& v){return
+  // v[0];}), VEC& >::type type;
+
+  // Works in c++17.
   static auto elt(const VEC& v) -> decltype(v[0]);
   typedef typename std::invoke_result<decltype(elt), const VEC&>::type type1;
   typedef std::remove_cv_t<std::remove_reference_t<type1>> type;
 };
 
-/// Deduce the element type from a vectorized type.
+/**
+ * @brief Define a nice alias for the element type of a vectorized type
+ */
 template<class VEC>
 using vec_type_t = typename vec_type<VEC>::type;
 
 /**
- * brief Deduce the type of the mask returned by relational operations,
+ * @brief Deduce the type of the mask returned by relational operations,
  * for a vectorized type.
  */
 template<class VEC>
-struct mask_type
+struct vec_mask_type
 {
   static auto maskt(const VEC& v1, const VEC& v2) -> decltype(v1 < v2);
   typedef
@@ -145,9 +169,12 @@ struct mask_type
       type1;
   typedef std::remove_cv_t<std::remove_reference_t<type1>> type;
 };
-/// Deduce the mask type for a vectorized type.
+
+/**
+ * @brief Define a nice alias for the mask type for a vectorized type.
+ */
 template<class VEC>
-using mask_type_t = typename mask_type<VEC>::type;
+using vec_mask_type_t = typename vec_mask_type<VEC>::type;
 
 /**
  * @brief Return the number of elements in a vectorized type.
@@ -179,7 +206,6 @@ inline void
 vbroadcast(VEC& v, T x)
 {
   // using  - to avoid sign conversions.
-  // using + adds  extra instructions due to float arithmetic.
   v = x - VEC{ 0 };
 }
 
@@ -214,16 +240,9 @@ vstore(vec_type_t<VEC>* dst, const VEC& src)
  */
 template<typename VEC>
 inline void
-vselect(VEC& dst, const VEC& a, const VEC& b, const mask_type_t<VEC>& mask)
+vselect(VEC& dst, const VEC& a, const VEC& b, const vec_mask_type_t<VEC>& mask)
 {
-#if !HAVE_VECTOR_TERNARY_OPERATOR
-  constexpr size_t N = vec_size<VEC>();
-  for (size_t i = 0; i < N; i++) {
-    dst[i] = mask[i] ? a[i] : b[i];
-  }
-#else
   dst = mask ? a : b;
-#endif
 }
 
 /*
@@ -234,14 +253,7 @@ template<typename VEC>
 inline void
 vmin(VEC& dst, const VEC& a, const VEC& b)
 {
-#if !HAVE_VECTOR_TERNARY_OPERATOR
-  constexpr size_t N = vec_size<VEC>();
-  for (size_t i = 0; i < N; i++) {
-    dst[i] = a[i] < b[i] ? a[i] : b[i];
-  }
-#else
   dst = a < b ? a : b;
-#endif
 }
 
 /*
@@ -252,18 +264,20 @@ template<typename VEC>
 inline void
 vmax(VEC& dst, const VEC& a, const VEC& b)
 {
-#if !HAVE_VECTOR_TERNARY_OPERATOR
-  constexpr size_t N = vec_size<VEC>();
-  for (size_t i = 0; i < N; i++) {
-    dst[i] = a[i] > b[i] ? a[i] : b[i];
-  }
-#else
   dst = a > b ? a : b;
-#endif
 }
 
-/*
- * Helper for static asserts for argument packs
+template<typename VEC1, typename VEC2>
+inline void
+vconvert(VEC1& dst, const VEC2& src)
+{
+  static_assert((vec_size<VEC1>() == vec_size<VEC2>()),
+                "vconvert dst and src have different number of elements");
+  dst = __builtin_convertvector(src, VEC1);
+}
+
+/**
+ * @brief Helper for static asserts for argument packs
  */
 namespace bool_pack_helper {
 template<bool...>
@@ -280,38 +294,40 @@ template<size_t... Indices, typename VEC>
 inline void
 vpermute(VEC& dst, const VEC& src)
 {
+
   constexpr size_t N = vec_size<VEC>();
   static_assert((sizeof...(Indices) == N),
-                "Number of indices different than vector size");
+                "vpermute number of indices different than vector size");
   static_assert(
     bool_pack_helper::all_true<(Indices >= 0 && Indices < N)...>::value,
-    "permute indices outside allowed range");
+    "vpermute value of a mask index is outside the allowed range");
 #if defined(__clang__)
   dst = __builtin_shufflevector(src, src, Indices...);
 #else // gcc
-  dst = __builtin_shuffle(src, mask_type_t<VEC>{ Indices... });
+  dst = __builtin_shuffle(src, vec_mask_type_t<VEC>{ Indices... });
 #endif
 }
 
 /**
- * @brief vblend function.
- * permutes and blends elements from two vectors
- * Similar to the permute functions, but with two input vectors.
+ * @brief vpermute2 function.
+ * move any element of a vector src
+ * into any or multiple position inside dst.
  */
 template<size_t... Indices, typename VEC>
 inline void
-vblend(VEC& dst, const VEC& src1, const VEC& src2)
+vpermute2(VEC& dst, const VEC& src1, const VEC& src2)
 {
   constexpr size_t N = vec_size<VEC>();
   static_assert((sizeof...(Indices) == N),
-                "Number of indices different than vector size");
+                "vpermute2 number of indices different than vector size");
   static_assert(
     bool_pack_helper::all_true<(Indices >= 0 && Indices < 2 * N)...>::value,
-    "blend indices outside allowed range");
+    "vpermute2 value of a mask index is outside the allowed range");
+
 #if defined(__clang__)
   dst = __builtin_shufflevector(src1, src2, Indices...);
 #else // gcc
-  dst = __builtin_shuffle(src1, src2, mask_type_t<VEC>{ Indices... });
+  dst = __builtin_shuffle(src1, src2, vec_mask_type_t<VEC>{ Indices... });
 #endif
 }
 

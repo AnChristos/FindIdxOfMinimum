@@ -105,7 +105,7 @@ findMinIndexVec16(const float* distancesIn, int n)
   vec<int, 4> indices1 = { 0, 1, 2, 3 };
   vec<int, 4> indices2 = { 4, 5, 6, 7 };
   vec<int, 4> indices3 = { 8, 9, 10,11 };
-  vec<int, 4> indices4 = { 12, 12, 14,15 };
+  vec<int, 4> indices4 = { 12, 13, 14,15 };
 
   vec<int, 4> minindices1 = indices1;
   vec<int, 4> minindices2 = indices2;
@@ -145,7 +145,7 @@ findMinIndexVec16(const float* distancesIn, int n)
     vselect(minindices3, indices3, minindices3, lt3);
     vmin(minvalues3, values3, minvalues3);
     //4
-    vload(values4, array + i + 12); // 8-11
+    vload(values4, array + i + 12); // 12-15
     indices4 = indices4 + increment;
     vec<int, 4> lt4 = values4 < minvalues4;
     vselect(minindices4, indices4, minindices4, lt4);
