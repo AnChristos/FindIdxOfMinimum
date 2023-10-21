@@ -1,12 +1,12 @@
 ﻿#include "findMinimumIndex.h"
-#include <benchmark/benchmark.h>
 #include <algorithm>
+#include <benchmark/benchmark.h>
 #include <random>
 /*
  * create global data
  * a bit hacky way
  */
-constexpr size_t nstart=256;
+constexpr size_t nstart = 256;
 constexpr size_t nn = 16 << 9;
 float* inArray;
 class InitArray
@@ -15,7 +15,8 @@ public:
   InitArray()
   {
     constexpr int alignment = 32;
-    std::mt19937 gen;
+    std::random_device rd;
+    std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(1.0, 10.0);
     // create buffer of right size,properly aligned
     size_t const size = nn * sizeof(float);
@@ -34,8 +35,20 @@ InitArray initArray;
  * Test non vector code
  */
 
+static void
+findMinimumSTL(benchmark::State& state)
+{
+  for (auto _ : state) {
+    const int n = state.range(0);
+    float minIndex = findMinSTL(inArray, n);
+    benchmark::DoNotOptimize(&minIndex);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(findMinimumSTL)->RangeMultiplier(8)->Range(nstart, nn);
+
 /*
- * C style 1
+ * C style
  */
 static void
 findMinimumIndexC(benchmark::State& state)
@@ -49,20 +62,6 @@ findMinimumIndexC(benchmark::State& state)
 }
 BENCHMARK(findMinimumIndexC)->RangeMultiplier(8)->Range(nstart, nn);
 
-/*
- * C style 2
- */
-static void
-findMinimumIndexC2(benchmark::State& state)
-{
-  for (auto _ : state) {
-    const int n = state.range(0);
-    int32_t minIndex = findMinIndexC2(inArray, n);
-    benchmark::DoNotOptimize(&minIndex);
-    benchmark::ClobberMemory();
-  }
-}
-BENCHMARK(findMinimumIndexC2)->RangeMultiplier(8)->Range(nstart, nn);
 /*
  * Use STL
  */
@@ -79,6 +78,18 @@ findMinimumIndexSTL(benchmark::State& state)
 BENCHMARK(findMinimumIndexSTL)->RangeMultiplier(8)->Range(nstart, nn);
 
 static void
+findMinimumVec(benchmark::State& state)
+{
+  for (auto _ : state) {
+    const int n = state.range(0);
+    float min = findMinVec(inArray, n);
+    benchmark::DoNotOptimize(&min);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(findMinimumVec)->RangeMultiplier(8)->Range(nstart, nn);
+
+static void
 findMinimumIndexVec(benchmark::State& state)
 {
   for (auto _ : state) {
@@ -88,21 +99,6 @@ findMinimumIndexVec(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-
 BENCHMARK(findMinimumIndexVec)->RangeMultiplier(8)->Range(nstart, nn);
-
-static void
-findMinimumIndexVec16(benchmark::State& state)
-{
-  for (auto _ : state) {
-    const int n = state.range(0);
-    int32_t minIndex = findMinIndexVec16(inArray, n);
-    benchmark::DoNotOptimize(&minIndex);
-    benchmark::ClobberMemory();
-  }
-}
-
-BENCHMARK(findMinimumIndexVec16)->RangeMultiplier(8)->Range(nstart, nn);
-
 
 BENCHMARK_MAIN();
