@@ -4,13 +4,23 @@
 
 #include "vec.h"
 
-/* find just the minimum using STL*/
+/* Various implementations for calculating the minimum index of
+ * pairwise float distances*/
+
+/* minimum scalar */
 [[gnu::always_inline]] inline float
-findMinSTL(const float* distancesIn, int n)
+findMinC(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
-  return *(std::min_element(array, array + n));
+  float minvalue = array[0];
+  for (int i = 0; i < n; ++i) {
+    const float value = array[i];
+    if (value < minvalue) {
+      minvalue = value;
+    }
+  }
+  return minvalue;
 }
 
 /* index of minimum scalar */
@@ -29,6 +39,15 @@ findMinIndexC(const float* distancesIn, int n)
     }
   }
   return minIndex;
+}
+
+/* find just the minimum using STL*/
+[[gnu::always_inline]] inline float
+findMinSTL(const float* distancesIn, int n)
+{
+  constexpr int alignment = 32;
+  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  return *(std::min_element(array, array + n));
 }
 
 /* index of minimum STL*/
@@ -98,9 +117,7 @@ findMinVec(const float* distancesIn, int n)
   return minvalue;
 }
 
-/* index of minimum (following ideas from
- * http://0x80.pl/notesen/2018-10-03-simd-index-of-min.html) using gcc vec
- * extensions*/
+/* index of minimum vec*/
 [[gnu::always_inline]] inline int32_t
 findMinIndexVec(const float* distancesIn, int n)
 {

@@ -35,18 +35,15 @@ public:
 InitArray initArray;
 
 /*
- * scalar just find the minimum
+ * Scalar code C style
  */
 static void
-findMinimum()
+findMinimumC()
 {
-  float min = findMinSTL(array, n);
+  float min = findMinC(array, n);
   std::cout << "C Minimum value : " << min << '\n';
 }
 
-/*
- * Scalar code
- */
 static void
 findMinimumIndexC()
 {
@@ -58,6 +55,13 @@ findMinimumIndexC()
 /*
  * Scalar code using STL
  */
+static void
+findMinimumSTL()
+{
+  float min = findMinSTL(array, n);
+  std::cout << "STL Minimum value : " << min << '\n';
+}
+
 static void
 findMinimumIndexSTL()
 {
@@ -89,8 +93,9 @@ findMinimumIndexVec()
 int
 main()
 {
-  findMinimum();
+  findMinimumC();
   findMinimumIndexC();
+  findMinimumSTL();
   findMinimumIndexSTL();
   findMinimumVec();
   findMinimumIndexVec();

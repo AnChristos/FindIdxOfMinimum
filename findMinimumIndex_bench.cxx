@@ -32,24 +32,20 @@ public:
 InitArray initArray;
 
 /*
- * Test non vector code
+ * C style
  */
-
 static void
-findMinimumSTL(benchmark::State& state)
+findMinimumC(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
-    float minIndex = findMinSTL(inArray, n);
-    benchmark::DoNotOptimize(&minIndex);
+    int32_t min = findMinC(inArray, n);
+    benchmark::DoNotOptimize(&min);
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumSTL)->RangeMultiplier(8)->Range(nstart, nn);
+BENCHMARK(findMinimumC)->RangeMultiplier(8)->Range(nstart, nn);
 
-/*
- * C style
- */
 static void
 findMinimumIndexC(benchmark::State& state)
 {
@@ -66,6 +62,18 @@ BENCHMARK(findMinimumIndexC)->RangeMultiplier(8)->Range(nstart, nn);
  * Use STL
  */
 static void
+findMinimumSTL(benchmark::State& state)
+{
+  for (auto _ : state) {
+    const int n = state.range(0);
+    float minIndex = findMinSTL(inArray, n);
+    benchmark::DoNotOptimize(&minIndex);
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(findMinimumSTL)->RangeMultiplier(8)->Range(nstart, nn);
+
+static void
 findMinimumIndexSTL(benchmark::State& state)
 {
   for (auto _ : state) {
@@ -77,6 +85,9 @@ findMinimumIndexSTL(benchmark::State& state)
 }
 BENCHMARK(findMinimumIndexSTL)->RangeMultiplier(8)->Range(nstart, nn);
 
+/*
+ * Use vectorized code
+ */
 static void
 findMinimumVec(benchmark::State& state)
 {
