@@ -6,7 +6,7 @@
  * create global data
  * a bit hacky way
  */
-constexpr size_t nstart = 32;
+constexpr size_t nstart = 16;
 constexpr size_t nn = 16 << 9;
 
 constexpr int alignment = 32;
@@ -44,7 +44,7 @@ findMinimumIndexC(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexC)->RangeMultiplier(8)->Range(nstart, nn);
+BENCHMARK(findMinimumIndexC)->RangeMultiplier(2)->Range(nstart, nn);
 
 static void
 findMinimumIndexSTL(benchmark::State& state)
@@ -57,7 +57,7 @@ findMinimumIndexSTL(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexSTL)->RangeMultiplier(8)->Range(nstart, nn);
+BENCHMARK(findMinimumIndexSTL)->RangeMultiplier(2)->Range(nstart, nn);
 
 static void
 findMinimumIndexVecBlend(benchmark::State& state)
@@ -70,7 +70,7 @@ findMinimumIndexVecBlend(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexVecBlend)->RangeMultiplier(8)->Range(nstart, nn);
+BENCHMARK(findMinimumIndexVecBlend)->RangeMultiplier(2)->Range(nstart, nn);
 
 static void
 findMinimumIndexVecUnordered(benchmark::State& state)
@@ -83,6 +83,6 @@ findMinimumIndexVecUnordered(benchmark::State& state)
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexVecUnordered)->RangeMultiplier(8)->Range(nstart, nn);
+BENCHMARK(findMinimumIndexVecUnordered)->RangeMultiplier(2)->Range(nstart, nn);
 
 BENCHMARK_MAIN();

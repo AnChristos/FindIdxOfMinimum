@@ -109,13 +109,18 @@ vecBlend(const float* distancesIn, int n)
   /*
    * Do the final calculation scalar way
    */
-  size_t minIndex = minindices1[0];
-  float minvalue = minvalues1[0];
+  int minindices[4];
+  float minvalues[4];
+  vstore(minvalues, minvalues1);
+  vstore(minindices, minindices1);
+  size_t minIndex = minindices[0];
+  float minvalue = minvalues[0];
+
   for (size_t i = 1; i < 4; ++i) {
-    const float value = minvalues1[i];
+    const float value = minvalues[i];
     if (value < minvalue) {
       minvalue = value;
-      minIndex = minindices1[i];
+      minIndex = minindices[i];
     }
   }
   return minIndex;
