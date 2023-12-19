@@ -331,6 +331,14 @@ vpermute2(VEC& dst, const VEC& src1, const VEC& src2)
 #endif
 }
 
+template<typename VEC>
+inline
+bool vAny(const VEC& vec){
+  VEC zero;
+  vbroadcast(zero,0);
+  return std::memcmp(&vec,&zero,sizeof(VEC));
+}
+
 } // namespace CxxUtils
 
 #endif // not CXXUTILS_VEC_H

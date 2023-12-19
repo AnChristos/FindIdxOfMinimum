@@ -34,32 +34,12 @@ public:
 };
 InitArray initArray;
 
-/*
- * Scalar code C style
- */
-static void
-findMinimumC()
-{
-  float min = findMinC(array, n);
-  std::cout << "C Minimum value : " << min << '\n';
-}
-
 static void
 findMinimumIndexC()
 {
   int32_t minIndex = findMinIndexC(array, n);
   std::cout << "C Minimum index : " << minIndex << " with value "
             << array[minIndex] << '\n';
-}
-
-/*
- * Scalar code using STL
- */
-static void
-findMinimumSTL()
-{
-  float min = findMinSTL(array, n);
-  std::cout << "STL Minimum value : " << min << '\n';
 }
 
 static void
@@ -69,35 +49,35 @@ findMinimumIndexSTL()
   std::cout << "STL Minimum index : " << minIndex << " with value "
             << array[minIndex] << '\n';
 }
-/*
- * vec just find the minimum
- */
-static void
-findMinimumVec()
-{
-  float min = findMinVec(array, n);
-  std::cout << "Vec Minimum value : " << min << '\n';
-}
 
 /*
- * vec find the minimum and index
+ * vec find the minimum and index (impl 1)
  */
 static void
 findMinimumIndexVec()
 {
   int32_t minIndex = findMinIndexVec(array, n);
-  std::cout << "Vec Minimum index : " << minIndex << " with value "
+  std::cout << "Vec Minimum index 1 : " << minIndex << " with value "
+            << array[minIndex] << '\n';
+}
+
+/*
+ * vec find the minimum and index (impl 2)
+ */
+static void
+findMinimumIndexVec2()
+{
+  int32_t minIndex = findMinIndexVec2(array, n);
+  std::cout << "Vec Minimum index 2 : " << minIndex << " with value "
             << array[minIndex] << '\n';
 }
 
 int
 main()
 {
-  findMinimumC();
   findMinimumIndexC();
-  findMinimumSTL();
   findMinimumIndexSTL();
-  findMinimumVec();
   findMinimumIndexVec();
+  findMinimumIndexVec2();
   return 0;
 }
