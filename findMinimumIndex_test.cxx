@@ -3,17 +3,13 @@
 #include <iostream>
 #include <random>
 
-/*
- * Alignment of  64 bytes
- */
-constexpr int alignment = 64;
+constexpr int alignment = 32;
 /*
  * create global data
  * a bit hacky way
  */
 constexpr size_t n = 16 << 8;
-float* array;
-class InitArray
+struct InitArray
 {
 public:
   InitArray()
@@ -31,23 +27,26 @@ public:
     }
   }
   ~InitArray() { free(array); }
+  float* array;
 };
-InitArray initArray;
+static const InitArray initArray;
 
 static void
 findMinimumIndexC()
 {
-  int32_t minIndex = findMinimumIndex::impl<findMinimumIndex::C>(array, n);
+  int32_t minIndex =
+    findMinimumIndex::impl<findMinimumIndex::C>(initArray.array, n);
   std::cout << "C Minimum index : " << minIndex << " with value "
-            << array[minIndex] << '\n';
+            << initArray.array[minIndex] << '\n';
 }
 
 static void
 findMinimumIndexSTL()
 {
-  int32_t minIndex = findMinimumIndex::impl<findMinimumIndex::STL>(array, n);
+  int32_t minIndex =
+    findMinimumIndex::impl<findMinimumIndex::STL>(initArray.array, n);
   std::cout << "STL Minimum index : " << minIndex << " with value "
-            << array[minIndex] << '\n';
+            << initArray.array[minIndex] << '\n';
 }
 
 /*
@@ -57,9 +56,9 @@ static void
 findMinimumIndexVecBlend()
 {
   int32_t minIndex =
-    findMinimumIndex::impl<findMinimumIndex::VecBlend>(array, n);
+    findMinimumIndex::impl<findMinimumIndex::VecBlend>(initArray.array, n);
   std::cout << "Vec Minimum index Blend : " << minIndex << " with value "
-            << array[minIndex] << '\n';
+            << initArray.array[minIndex] << '\n';
 }
 
 /*
@@ -69,9 +68,9 @@ static void
 findMinimumIndexVecUnordered()
 {
   int32_t minIndex =
-    findMinimumIndex::impl<findMinimumIndex::VecUnordered>(array, n);
+    findMinimumIndex::impl<findMinimumIndex::VecUnordered>(initArray.array, n);
   std::cout << "Vec Minimum index Unordered : " << minIndex << " with value "
-            << array[minIndex] << '\n';
+            << initArray.array[minIndex] << '\n';
 }
 
 int
