@@ -4,12 +4,13 @@
 
 #include "vec.h"
 
+namespace findMinimumIndexDetail {
 /* Various implementations for calculating the minimum index of
  * pairwise float distances*/
 
 /* index of minimum scalar */
 [[gnu::always_inline]] inline int32_t
-findMinIndexC(const float* distancesIn, int n)
+scalarC(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
@@ -27,7 +28,7 @@ findMinIndexC(const float* distancesIn, int n)
 
 /* index of minimum STL*/
 [[gnu::always_inline]] inline int32_t
-findMinIndexSTL(const float* distancesIn, int n)
+scalarSTL(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
@@ -36,7 +37,7 @@ findMinIndexSTL(const float* distancesIn, int n)
 
 /* index of minimum vec*/
 [[gnu::always_inline]] inline int32_t
-findMinIndexVec(const float* distancesIn, int n)
+vecBlend(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   using namespace CxxUtils;
@@ -123,17 +124,17 @@ findMinIndexVec(const float* distancesIn, int n)
  * vectorized code
  */
 /* minimum*/
-[[gnu::always_inline]] inline float
-findMinIndexVec2(const float* distancesIn, int n)
+[[gnu::always_inline]] inline int32_t
+vecUnordered(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   using namespace CxxUtils;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
 
-  int idx = 0;
+  int32_t idx = 0;
   float min = distancesIn[0];
   vec<float, 4> minvalues;
-  vbroadcast(minvalues,min);
+  vbroadcast(minvalues, min);
   vec<float, 4> values1;
   vec<float, 4> values2;
   vec<float, 4> values3;
@@ -156,23 +157,50 @@ findMinIndexVec2(const float* distancesIn, int n)
     vmin(values1, values1, values3);
 
     vec<int, 4> newMinimumMask = values1 < minvalues;
-    if (vAny(newMinimumMask)) {
+    if (vany(newMinimumMask)) {
       idx = i;
       for (int j = i; j < i + 16; j++) {
         min = (distancesIn[j] < min ? distancesIn[j] : min);
       }
-      vbroadcast(minvalues,min);
+      vbroadcast(minvalues, min);
     }
   }
   /*
    * Do the final calculation scalar way
    */
-  for (int i = idx; i < idx + 16; i++){
-    if (distancesIn[i] == min){
+  for (int i = idx; i < idx + 16; i++) {
+    if (distancesIn[i] == min) {
       return i;
     }
   }
   return 0;
 }
+}
+namespace findMinimumIndex {
+enum Impl
+{
+  VecUnordered = 0,
+  VecBlend = 1,
+  C = 2,
+  STL = 3
+};
 
+template<enum Impl I>
+[[gnu::always_inline]] inline int32_t
+impl(const float* distancesIn, int n)
+{
+
+  static_assert(I == VecUnordered || I == VecBlend || I == C || I == STL,
+                "Not a valid implementation chosen");
+  if constexpr (I == VecUnordered) {
+    return findMinimumIndexDetail::vecUnordered(distancesIn, n);
+  } else if constexpr (I == VecBlend) {
+    return findMinimumIndexDetail::vecBlend(distancesIn, n);
+  } else if constexpr (I == C) {
+    return findMinimumIndexDetail::scalarC(distancesIn, n);
+  } else if constexpr (I == STL) {
+    return findMinimumIndexDetail::scalarSTL(distancesIn, n);
+  }
+}
+}
 #endif

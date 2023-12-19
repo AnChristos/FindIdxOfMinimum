@@ -180,7 +180,7 @@ using vec_mask_type_t = typename vec_mask_type<VEC>::type;
  * @brief Return the number of elements in a vectorized type.
  */
 template<class VEC>
-inline constexpr size_t
+[[gnu::always_inline]] inline constexpr size_t
 vec_size()
 {
   typedef vec_type_t<VEC> ELT;
@@ -191,7 +191,7 @@ vec_size()
  * @brief Return the number of elements in a vectorized type.
  */
 template<class VEC>
-inline constexpr size_t
+[[gnu::always_inline]] inline constexpr size_t
 vec_size(const VEC&)
 {
   typedef vec_type_t<VEC> ELT;
@@ -202,7 +202,7 @@ vec_size(const VEC&)
  * @brief Copy a scalar to each element of a vectorized type.
  */
 template<typename VEC, typename T>
-inline void
+[[gnu::always_inline]] inline void
 vbroadcast(VEC& v, T x)
 {
   // using  - to avoid sign conversions.
@@ -227,10 +227,25 @@ vload(VEC& dst, vec_type_t<VEC> const* src)
  * Uses memcpy to avoid alignment issues
  */
 template<typename VEC>
-inline void
+[[gnu::always_inline]] inline void
 vstore(vec_type_t<VEC>* dst, const VEC& src)
 {
   std::memcpy(dst, &src, sizeof(VEC));
+}
+
+/*
+ * @brief return if any of the
+ * elements of a mask is true (not 0)
+ */
+template<typename VEC>
+[[gnu::always_inline]] inline bool
+vany(const VEC& mask)
+{
+  static_assert(std::is_integral<vec_type_t<VEC>>::value,
+                "vec must be integral (aka a mask)");
+  VEC zero;
+  vbroadcast(zero, vec_type_t<VEC>{ 0 });
+  return std::memcmp(&mask, &zero, sizeof(VEC)) != 0;
 }
 
 /*
@@ -250,7 +265,7 @@ vselect(VEC& dst, const VEC& a, const VEC& b, const vec_mask_type_t<VEC>& mask)
  * copies to @c dst[i]  the min(a[i],b[i])
  */
 template<typename VEC>
-inline void
+[[gnu::always_inline]] inline void
 vmin(VEC& dst, const VEC& a, const VEC& b)
 {
   dst = a < b ? a : b;
@@ -261,14 +276,14 @@ vmin(VEC& dst, const VEC& a, const VEC& b)
  * copies to @c dst[i]  the max(a[i],b[i])
  */
 template<typename VEC>
-inline void
+[[gnu::always_inline]] inline void
 vmax(VEC& dst, const VEC& a, const VEC& b)
 {
   dst = a > b ? a : b;
 }
 
 template<typename VEC1, typename VEC2>
-inline void
+[[gnu::always_inline]] inline void
 vconvert(VEC1& dst, const VEC2& src)
 {
   static_assert((vec_size<VEC1>() == vec_size<VEC2>()),
@@ -291,7 +306,7 @@ using all_true = std::is_same<bool_pack<bs..., true>, bool_pack<true, bs...>>;
  * into any or multiple position inside dst.
  */
 template<size_t... Indices, typename VEC>
-inline void
+[[gnu::always_inline]] inline void
 vpermute(VEC& dst, const VEC& src)
 {
 
@@ -314,7 +329,7 @@ vpermute(VEC& dst, const VEC& src)
  * into any or multiple position inside dst.
  */
 template<size_t... Indices, typename VEC>
-inline void
+[[gnu::always_inline]] inline void
 vpermute2(VEC& dst, const VEC& src1, const VEC& src2)
 {
   constexpr size_t N = vec_size<VEC>();
@@ -329,14 +344,6 @@ vpermute2(VEC& dst, const VEC& src1, const VEC& src2)
 #else // gcc
   dst = __builtin_shuffle(src1, src2, vec_mask_type_t<VEC>{ Indices... });
 #endif
-}
-
-template<typename VEC>
-inline
-bool vAny(const VEC& vec){
-  VEC zero;
-  vbroadcast(zero,0);
-  return std::memcmp(&vec,&zero,sizeof(VEC));
 }
 
 } // namespace CxxUtils

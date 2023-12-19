@@ -37,7 +37,7 @@ InitArray initArray;
 static void
 findMinimumIndexC()
 {
-  int32_t minIndex = findMinIndexC(array, n);
+  int32_t minIndex = findMinimumIndex::impl<findMinimumIndex::C>(array, n);
   std::cout << "C Minimum index : " << minIndex << " with value "
             << array[minIndex] << '\n';
 }
@@ -45,7 +45,7 @@ findMinimumIndexC()
 static void
 findMinimumIndexSTL()
 {
-  int32_t minIndex = findMinIndexSTL(array, n);
+  int32_t minIndex = findMinimumIndex::impl<findMinimumIndex::STL>(array, n);
   std::cout << "STL Minimum index : " << minIndex << " with value "
             << array[minIndex] << '\n';
 }
@@ -54,10 +54,11 @@ findMinimumIndexSTL()
  * vec find the minimum and index (impl 1)
  */
 static void
-findMinimumIndexVec()
+findMinimumIndexVecBlend()
 {
-  int32_t minIndex = findMinIndexVec(array, n);
-  std::cout << "Vec Minimum index 1 : " << minIndex << " with value "
+  int32_t minIndex =
+    findMinimumIndex::impl<findMinimumIndex::VecBlend>(array, n);
+  std::cout << "Vec Minimum index Blend : " << minIndex << " with value "
             << array[minIndex] << '\n';
 }
 
@@ -65,10 +66,11 @@ findMinimumIndexVec()
  * vec find the minimum and index (impl 2)
  */
 static void
-findMinimumIndexVec2()
+findMinimumIndexVecUnordered()
 {
-  int32_t minIndex = findMinIndexVec2(array, n);
-  std::cout << "Vec Minimum index 2 : " << minIndex << " with value "
+  int32_t minIndex =
+    findMinimumIndex::impl<findMinimumIndex::VecUnordered>(array, n);
+  std::cout << "Vec Minimum index Unordered : " << minIndex << " with value "
             << array[minIndex] << '\n';
 }
 
@@ -77,7 +79,7 @@ main()
 {
   findMinimumIndexC();
   findMinimumIndexSTL();
-  findMinimumIndexVec();
-  findMinimumIndexVec2();
+  findMinimumIndexVecBlend();
+  findMinimumIndexVecUnordered();
   return 0;
 }
