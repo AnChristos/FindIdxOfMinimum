@@ -160,12 +160,17 @@ vecUnordered(const float* distancesIn, int n)
     vmin(values3, values3, values4);
     // Compare //1 with //3
     vmin(values1, values1, values3);
-
+    // see if the new minimum contain something less
+    // than the existing.
     vec<int, 4> newMinimumMask = values1 < minvalues;
     if (vany(newMinimumMask)) {
       idx = i;
-      for (int j = i; j < i + 16; j++) {
-        min = (distancesIn[j] < min ? distancesIn[j] : min);
+      float minCandidates[4];
+      vstore(minCandidates,values1);
+      for (int j = 0; j < 4; ++j) {
+        if (minCandidates[j] < min) {
+          min = minCandidates[j];
+        }
       }
       vbroadcast(minvalues, min);
     }
@@ -173,7 +178,7 @@ vecUnordered(const float* distancesIn, int n)
   /*
    * Do the final calculation scalar way
    */
-  for (int i = idx; i < idx + 16; i++) {
+  for (int i = idx; i < idx + 16; ++i) {
     if (distancesIn[i] == min) {
       return i;
     }
