@@ -1,11 +1,11 @@
-// This file's extension implies that it's C, but it's really -*- C++ -*-.
 /*
- * Copyright (C) 2002-2021 CERN for the benefit of the ATLAS collaboration.
+ * Copyright (C) 2002-2023 CERN for the benefit of the ATLAS collaboration.
  */
+
 /**
  * @file CxxUtils/vec.h
  * @author scott snyder <snyder@bnl.gov>
- * @author Christos Anastopoulos (additional helper methods)
+ * @author Christos Anastopoulos (helper methods)
  * @date Mar, 2020
  * @brief Vectorization helpers.
  *
