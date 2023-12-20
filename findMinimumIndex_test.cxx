@@ -8,7 +8,7 @@ constexpr int alignment = 32;
  * create global data
  * a bit hacky way
  */
-constexpr size_t n = 16 << 8;
+constexpr size_t n = 4096;
 struct InitArray
 {
 public:

@@ -144,7 +144,11 @@ vecUnordered(const float* distancesIn, int n)
   vec<float, 4> values2;
   vec<float, 4> values3;
   vec<float, 4> values4;
-  for (int i = 0; i < n; i += 16) {
+  vec<float, 4> values5;
+  vec<float, 4> values6;
+  vec<float, 4> values7;
+  vec<float, 4> values8;
+  for (int i = 0; i < n; i += 32) {
     // 1
     vload(values1, array + i); // 0-3
     // 2
@@ -153,20 +157,38 @@ vecUnordered(const float* distancesIn, int n)
     vload(values3, array + i + 8); // 8-11
     // 4
     vload(values4, array + i + 12); // 12-15
+    // 5
+    vload(values5, array + i + 16); // 16-19
+    // 6
+    vload(values6, array + i + 20); // 20-23
+    // 7
+    vload(values7, array + i + 24); // 24-27
+    // 8
+    vload(values8, array + i + 28); // 28-31
 
     // Compare //1 with //2
     vmin(values1, values1, values2);
     // compare //3 with //4
     vmin(values3, values3, values4);
+    // Compare //5 with //6
+    vmin(values5, values5, values6);
+    // compare /7 with //8
+    vmin(values7, values7, values8);
+
     // Compare //1 with //3
     vmin(values1, values1, values3);
+    // Compare //5 with //7
+    vmin(values5, values5, values7);
+    // Compare //1 with //5
+    vmin(values1, values1, values5);
+
     // see if the new minimum contain something less
     // than the existing.
     vec<int, 4> newMinimumMask = values1 < minvalues;
     if (vany(newMinimumMask)) {
       idx = i;
       float minCandidates[4];
-      vstore(minCandidates,values1);
+      vstore(minCandidates, values1);
       for (int j = 0; j < 4; ++j) {
         if (minCandidates[j] < min) {
           min = minCandidates[j];
@@ -178,7 +200,7 @@ vecUnordered(const float* distancesIn, int n)
   /*
    * Do the final calculation scalar way
    */
-  for (int i = idx; i < idx + 16; ++i) {
+  for (int i = idx; i < idx + 32; ++i) {
     if (distancesIn[i] == min) {
       return i;
     }
