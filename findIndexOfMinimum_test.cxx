@@ -77,7 +77,9 @@ static void
 findMin()
 {
   float min = findIndexOfMinimumDetail::vecFindMinimum(initArray.array, n);
-  std::cout << "Minimum : " << min << '\n';
+  std::cout << "Minimum : " << min << " at idx "
+            << findIndexOfMinimumDetail::vecIdxofValue(min, initArray.array, n)
+            << '\n';
 }
 
 int

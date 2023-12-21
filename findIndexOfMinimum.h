@@ -1,8 +1,7 @@
 #ifndef FINDMINIMUMINDEX
 #define FINDMINIMUMINDEX
-#include <algorithm>
-
 #include "vec.h"
+#include <algorithm>
 
 namespace findIndexOfMinimumDetail {
 
@@ -281,6 +280,45 @@ vecFindMinimum(const float* distancesIn, int n)
     }
   }
   return minvalue;
+}
+[[gnu::always_inline]] inline int32_t
+vecIdxofValue(const float value, const float* distancesIn, int n)
+{
+  using namespace CxxUtils;
+  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+
+  vec<float, 4> values1;
+  vec<float, 4> values2;
+  vec<float, 4> values3;
+  vec<float, 4> values4;
+  vec<float, 4> target;
+  vbroadcast(target, value);
+  for (int i = 0; i < n; i += 15) {
+    // 1
+    vload(values1, array + i); // 0-3
+    vec<int, 4> eq1 = values1 == target;
+    // 2
+    vload(values2, array + i + 4); // 4-7
+    vec<int, 4> eq2 = values2 == target;
+    // 3
+    vload(values3, array + i + 8); // 8-11
+    vec<int, 4> eq3 = values3 == target;
+    // 4
+    vload(values4, array + i + 12); // 12-15
+    vec<int, 4> eq4 = values4 == target;
+
+    vec<int, 4> eq12 = eq1 || eq2;
+    vec<int, 4> eq34 = eq3 || eq4;
+    vec<int, 4> eqAny = eq12 || eq34;
+    if (vany(eqAny)) {
+      for (int32_t idx = i; idx < i + 16; ++idx) {
+        if (distancesIn[idx] == value) {
+          return idx;
+        }
+      }
+    }
+  }
+  return -1;
 }
 
 }
