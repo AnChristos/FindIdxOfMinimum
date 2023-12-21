@@ -6,11 +6,11 @@
 
 namespace findIndexOfMinimumDetail {
 
+constexpr int alignment = 32;
 // index of minimum scalar
 [[gnu::always_inline]] inline int32_t
 scalarC(const float* distancesIn, int n)
 {
-  constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
   float minvalue = array[0];
   int minIndex = 0;
@@ -28,7 +28,6 @@ scalarC(const float* distancesIn, int n)
 [[gnu::always_inline]] inline int32_t
 scalarSTL(const float* distancesIn, int n)
 {
-  constexpr int alignment = 32;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
   return std::distance(array, std::min_element(array, array + n));
 }
@@ -37,7 +36,6 @@ scalarSTL(const float* distancesIn, int n)
 [[gnu::always_inline]] inline int32_t
 vecAlwaysTrackIdx(const float* distancesIn, int n)
 {
-  constexpr int alignment = 32;
   using namespace CxxUtils;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
   const vec<int, 4> increment = { 16, 16, 16, 16 };
@@ -124,14 +122,13 @@ vecAlwaysTrackIdx(const float* distancesIn, int n)
 [[gnu::always_inline]] inline int32_t
 vecUpdateIdxOnNewMin(const float* distancesIn, int n)
 {
-  constexpr int alignment = 32;
   using namespace CxxUtils;
   float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
 
   int32_t idx = 0;
   float min = distancesIn[0];
-  vec<float, 4> minvalues;
-  vbroadcast(minvalues, min);
+  vec<float, 4> minValues;
+  vbroadcast(minValues, min);
   vec<float, 4> values1;
   vec<float, 4> values2;
   vec<float, 4> values3;
@@ -176,7 +173,7 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
 
     // see if the new minimum contain something less
     // than the existing.
-    vec<int, 4> newMinimumMask = values1 < minvalues;
+    vec<int, 4> newMinimumMask = values1 < minValues;
     if (vany(newMinimumMask)) {
       idx = i;
       float minCandidates[4];
@@ -186,7 +183,7 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
           min = minCandidates[j];
         }
       }
-      vbroadcast(minvalues, min);
+      vbroadcast(minValues, min);
     }
   }
   /*
@@ -199,6 +196,93 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
   }
   return 0;
 }
+
+[[gnu::always_inline]] inline float
+vecFindMinimum(const float* distancesIn, int n)
+{
+  using namespace CxxUtils;
+  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+
+  vec<float, 4> minValues1;
+  vec<float, 4> minValues2;
+  vec<float, 4> minValues3;
+  vec<float, 4> minValues4;
+  vec<float, 4> minValues5;
+  vec<float, 4> minValues6;
+  vec<float, 4> minValues7;
+  vec<float, 4> minValues8;
+  vload(minValues1, array);
+  vload(minValues2, array + 4);
+  vload(minValues3, array + 8);
+  vload(minValues4, array + 12);
+  vload(minValues5, array + 16);
+  vload(minValues6, array + 20);
+  vload(minValues7, array + 24);
+  vload(minValues8, array + 28);
+  vec<float, 4> values1;
+  vec<float, 4> values2;
+  vec<float, 4> values3;
+  vec<float, 4> values4;
+  vec<float, 4> values5;
+  vec<float, 4> values6;
+  vec<float, 4> values7;
+  vec<float, 4> values8;
+  for (int i = 32; i < n; i += 32) {
+    // 1
+    vload(values1, array + i); // 0-3
+    vmin(minValues1, values1, minValues1);
+    // 2
+    vload(values2, array + i + 4); // 4-7
+    vmin(minValues2, values2, minValues2);
+    // 3
+    vload(values3, array + i + 8); // 8-11
+    vmin(minValues3, values3, minValues3);
+    // 4
+    vload(values4, array + i + 12); // 12-15
+    vmin(minValues4, values4, minValues4);
+    // 4
+    vload(values5, array + i + 16); // 16-19
+    vmin(minValues5, values5, minValues5);
+    // 4
+    vload(values6, array + i + 20); // 20-23
+    vmin(minValues6, values6, minValues6);
+    // 4
+    vload(values7, array + i + 24); // 24-27
+    vmin(minValues7, values7, minValues7);
+    // 4
+    vload(values8, array + i + 28); // 28-31
+    vmin(minValues8, values8, minValues8);
+  }
+  // Compare //1 with //2
+  vmin(minValues1, minValues1, minValues2);
+  // compare //3 with //4
+  vmin(minValues3, minValues3, minValues4);
+  // compare //5 with //6
+  vmin(minValues5, minValues5, minValues6);
+  // compare //7 with //8
+  vmin(minValues7, minValues7, minValues8);
+
+  // Compare //1 with //3
+  vmin(minValues1, minValues1, minValues3);
+  // Compare //5 with //7
+  vmin(minValues5, minValues5, minValues7);
+
+  // Compare //1 with //5
+  vmin(minValues1, minValues1, minValues5);
+
+  // Do the final calculation scalar way
+  float minValues[4];
+  vstore(minValues, minValues1);
+  float minvalue = minValues[0];
+  for (size_t i = 1; i < 4; ++i) {
+    const float value = minValues[i];
+    if (value < minvalue) {
+      minvalue = value;
+    }
+  }
+  return minvalue;
+}
+
 }
 namespace findIndexOfMinimum {
 enum Impl

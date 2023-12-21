@@ -4,10 +4,6 @@
 #include <random>
 
 constexpr int alignment = 32;
-/*
- * create global data
- * a bit hacky way
- */
 constexpr size_t n = 4096;
 struct InitArray
 {
@@ -57,9 +53,6 @@ findIdxMinSTL()
             << initArray.array[minIndex] << '\n';
 }
 
-/*
- * vec find the minimum and index (impl 1)
- */
 static void
 findIdxMinVecAlwaysTrackIdx()
 {
@@ -69,9 +62,6 @@ findIdxMinVecAlwaysTrackIdx()
             << initArray.array[minIndex] << '\n';
 }
 
-/*
- * vec find the minimum and index (impl 2)
- */
 static void
 findIdxMinVecUpdateIdxOnNewMin()
 {
