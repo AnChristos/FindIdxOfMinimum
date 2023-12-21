@@ -12,13 +12,15 @@ public:
   {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.1, 100.0);
+    std::uniform_real_distribution<> dis(0.1, 10.0);
     // create buffer of right size,properly aligned
     size_t const size = nend * sizeof(float);
     posix_memalign((void**)&array, alignment, size);
     for (size_t i = 0; i < nend; ++i) {
       array[i] = dis(gen);
     }
+    // in case we want to sort
+    //std::sort(array, array + nend, [](float a, float b) { return a > b; });
   }
   ~InitArray() { free(array); }
   float* array;

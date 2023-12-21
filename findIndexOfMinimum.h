@@ -293,7 +293,7 @@ vecIdxofValue(const float value, const float* distancesIn, int n)
   vec<float, 4> values4;
   vec<float, 4> target;
   vbroadcast(target, value);
-  for (int i = 0; i < n; i += 15) {
+  for (int i = 0; i < n; i += 16) {
     // 1
     vload(values1, array + i); // 0-3
     vec<int, 4> eq1 = values1 == target;
