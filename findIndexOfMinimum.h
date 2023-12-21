@@ -321,14 +321,25 @@ vecIdxofValue(const float value, const float* distancesIn, int n)
   return -1;
 }
 
+[[gnu::always_inline]] inline int32_t
+vecMinThenIdx(const float* distancesIn, int n)
+{
+  using namespace CxxUtils;
+  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float min = vecFindMinimum(array, n);
+  return vecIdxofValue(min, array, n);
 }
+
+} // findIndexOfMinimumDetail
+
 namespace findIndexOfMinimum {
 enum Impl
 {
   VecUpdateIdxOnNewMin = 0,
   VecAlwaysTrackIdx = 1,
-  C = 2,
-  STL = 3
+  VecMinThenIdx = 2,
+  C = 3,
+  STL = 4
 };
 
 template<enum Impl I>
@@ -336,18 +347,20 @@ template<enum Impl I>
 impl(const float* distancesIn, int n)
 {
 
-  static_assert(I == VecUpdateIdxOnNewMin || I == VecAlwaysTrackIdx || I == C ||
-                  I == STL,
+  static_assert(I == VecUpdateIdxOnNewMin || I == VecAlwaysTrackIdx ||
+                  I == VecMinThenIdx || I == C || I == STL,
                 "Not a valid implementation chosen");
   if constexpr (I == VecUpdateIdxOnNewMin) {
     return findIndexOfMinimumDetail::vecUpdateIdxOnNewMin(distancesIn, n);
   } else if constexpr (I == VecAlwaysTrackIdx) {
     return findIndexOfMinimumDetail::vecAlwaysTrackIdx(distancesIn, n);
+  } else if constexpr (I == VecMinThenIdx) {
+    return findIndexOfMinimumDetail::vecMinThenIdx(distancesIn, n);
   } else if constexpr (I == C) {
     return findIndexOfMinimumDetail::scalarC(distancesIn, n);
   } else if constexpr (I == STL) {
     return findIndexOfMinimumDetail::scalarSTL(distancesIn, n);
   }
 }
-}
+} // findIndexOfMinimum
 #endif

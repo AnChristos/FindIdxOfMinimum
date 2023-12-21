@@ -74,12 +74,12 @@ findIdxMinVecUpdateIdxOnNewMin()
 }
 
 static void
-findMin()
+findvecMinThenIdx()
 {
-  float min = findIndexOfMinimumDetail::vecFindMinimum(initArray.array, n);
-  std::cout << "Minimum : " << min << " at idx "
-            << findIndexOfMinimumDetail::vecIdxofValue(min, initArray.array, n)
-            << '\n';
+  int32_t minIndex =
+    findIndexOfMinimum::impl<findIndexOfMinimum::VecMinThenIdx>(initArray.array, n);
+  std::cout << "Vec Index of Minimum vecMinThenIdx : " << minIndex
+            << " with value " << initArray.array[minIndex] << '\n';
 }
 
 int
@@ -89,6 +89,6 @@ main()
   findIdxMinSTL();
   findIdxMinVecAlwaysTrackIdx();
   findIdxMinVecUpdateIdxOnNewMin();
-  findMin();
+  findvecMinThenIdx();
   return 0;
 }
