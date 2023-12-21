@@ -4,11 +4,9 @@
 
 #include "vec.h"
 
-namespace findMinimumIndexDetail {
-/* Various implementations for calculating the minimum index of
- * pairwise float distances*/
+namespace findIndexOfMinimumDetail {
 
-/* index of minimum scalar */
+// index of minimum scalar
 [[gnu::always_inline]] inline int32_t
 scalarC(const float* distancesIn, int n)
 {
@@ -26,7 +24,7 @@ scalarC(const float* distancesIn, int n)
   return minIndex;
 }
 
-/* index of minimum STL*/
+// index of minimum STL
 [[gnu::always_inline]] inline int32_t
 scalarSTL(const float* distancesIn, int n)
 {
@@ -35,9 +33,9 @@ scalarSTL(const float* distancesIn, int n)
   return std::distance(array, std::min_element(array, array + n));
 }
 
-/* index of minimum vec*/
+// index of minimum vectorized. Always tracking indices
 [[gnu::always_inline]] inline int32_t
-vecBlend(const float* distancesIn, int n)
+vecAlwaysTrackIdx(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   using namespace CxxUtils;
@@ -114,19 +112,17 @@ vecBlend(const float* distancesIn, int n)
       minValue = value;
       minIndex = index;
     } else if (value == minValue && index < minIndex) {
-      //we want to return the smallest index
-      //in case of 2 same values
+      // we want to return the smallest index
+      // in case of 2 same values
       minIndex = index;
     }
   }
   return minIndex;
 }
-/*
- * vectorized code
- */
-/* minimum*/
+
+// index of minimum vectorized. Update indices in new minimum
 [[gnu::always_inline]] inline int32_t
-vecUnordered(const float* distancesIn, int n)
+vecUpdateIdxOnNewMin(const float* distancesIn, int n)
 {
   constexpr int alignment = 32;
   using namespace CxxUtils;
@@ -204,11 +200,11 @@ vecUnordered(const float* distancesIn, int n)
   return 0;
 }
 }
-namespace findMinimumIndex {
+namespace findIndexOfMinimum {
 enum Impl
 {
-  VecUnordered = 0,
-  VecBlend = 1,
+  VecUpdateIdxOnNewMin = 0,
+  VecAlwaysTrackIdx = 1,
   C = 2,
   STL = 3
 };
@@ -218,16 +214,17 @@ template<enum Impl I>
 impl(const float* distancesIn, int n)
 {
 
-  static_assert(I == VecUnordered || I == VecBlend || I == C || I == STL,
+  static_assert(I == VecUpdateIdxOnNewMin || I == VecAlwaysTrackIdx || I == C ||
+                  I == STL,
                 "Not a valid implementation chosen");
-  if constexpr (I == VecUnordered) {
-    return findMinimumIndexDetail::vecUnordered(distancesIn, n);
-  } else if constexpr (I == VecBlend) {
-    return findMinimumIndexDetail::vecBlend(distancesIn, n);
+  if constexpr (I == VecUpdateIdxOnNewMin) {
+    return findIndexOfMinimumDetail::vecUpdateIdxOnNewMin(distancesIn, n);
+  } else if constexpr (I == VecAlwaysTrackIdx) {
+    return findIndexOfMinimumDetail::vecAlwaysTrackIdx(distancesIn, n);
   } else if constexpr (I == C) {
-    return findMinimumIndexDetail::scalarC(distancesIn, n);
+    return findIndexOfMinimumDetail::scalarC(distancesIn, n);
   } else if constexpr (I == STL) {
-    return findMinimumIndexDetail::scalarSTL(distancesIn, n);
+    return findIndexOfMinimumDetail::scalarSTL(distancesIn, n);
   }
 }
 }

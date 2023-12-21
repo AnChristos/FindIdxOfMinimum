@@ -21,12 +21,8 @@
  * A vectorized type may be named as @c CxxUtils::vec<T, N>.  Here @c T is the
  * element type, which should be an elementary integer or floating-point type.
  * @c N is the number of elements in the vector; it should be a power of 2.
- * This will either be a built-in vector type if the @c vector_size
- * attribute is supported or a fallback C++ class intended to be
- * (mostly) functionally equivalent (see vec_fb.h)
  *
- *
- * The GCC, clang and fallback vector types support:
+ * The GCC and clang vector types support:
  * ++, --, +,-,*,/,%, =, &,|,^,~, >>,<<, !, &&, ||,
  * ==, !=, >, <, >=, <=, =, sizeof and Initialization from brace-enclosed lists
  *

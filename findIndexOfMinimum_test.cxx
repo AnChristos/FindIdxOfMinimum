@@ -1,4 +1,4 @@
-﻿#include "findMinimumIndex.h"
+﻿#include "findIndexOfMinimum.h"
 #include <algorithm>
 #include <iostream>
 #include <random>
@@ -40,20 +40,20 @@ public:
 static const InitArray initArray;
 
 static void
-findMinimumIndexC()
+findIdxMinC()
 {
   int32_t minIndex =
-    findMinimumIndex::impl<findMinimumIndex::C>(initArray.array, n);
-  std::cout << "C Minimum index : " << minIndex << " with value "
+    findIndexOfMinimum::impl<findIndexOfMinimum::C>(initArray.array, n);
+  std::cout << "C Index of Minimum : " << minIndex << " with value "
             << initArray.array[minIndex] << '\n';
 }
 
 static void
-findMinimumIndexSTL()
+findIdxMinSTL()
 {
   int32_t minIndex =
-    findMinimumIndex::impl<findMinimumIndex::STL>(initArray.array, n);
-  std::cout << "STL Minimum index : " << minIndex << " with value "
+    findIndexOfMinimum::impl<findIndexOfMinimum::STL>(initArray.array, n);
+  std::cout << "STL Index of Minimum : " << minIndex << " with value "
             << initArray.array[minIndex] << '\n';
 }
 
@@ -61,11 +61,11 @@ findMinimumIndexSTL()
  * vec find the minimum and index (impl 1)
  */
 static void
-findMinimumIndexVecBlend()
+findIdxMinVecAlwaysTrackIdx()
 {
   int32_t minIndex =
-    findMinimumIndex::impl<findMinimumIndex::VecBlend>(initArray.array, n);
-  std::cout << "Vec Minimum index Blend : " << minIndex << " with value "
+    findIndexOfMinimum::impl<findIndexOfMinimum::VecAlwaysTrackIdx>(initArray.array, n);
+  std::cout << "Vec Index of Minimum VecAlwaysTrackIdx : " << minIndex << " with value "
             << initArray.array[minIndex] << '\n';
 }
 
@@ -73,20 +73,20 @@ findMinimumIndexVecBlend()
  * vec find the minimum and index (impl 2)
  */
 static void
-findMinimumIndexVecUnordered()
+findIdxMinVecUpdateIdxOnNewMin()
 {
   int32_t minIndex =
-    findMinimumIndex::impl<findMinimumIndex::VecUnordered>(initArray.array, n);
-  std::cout << "Vec Minimum index Unordered : " << minIndex << " with value "
+    findIndexOfMinimum::impl<findIndexOfMinimum::VecUpdateIdxOnNewMin>(initArray.array, n);
+  std::cout << "Vec Index of Minimum VecUpdateIdxOnNewMin : " << minIndex << " with value "
             << initArray.array[minIndex] << '\n';
 }
 
 int
 main()
 {
-  findMinimumIndexC();
-  findMinimumIndexSTL();
-  findMinimumIndexVecBlend();
-  findMinimumIndexVecUnordered();
+  findIdxMinC();
+  findIdxMinSTL();
+  findIdxMinVecAlwaysTrackIdx();
+  findIdxMinVecUpdateIdxOnNewMin();
   return 0;
 }

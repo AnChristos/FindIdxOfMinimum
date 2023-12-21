@@ -1,4 +1,4 @@
-﻿#include "findMinimumIndex.h"
+﻿#include "findIndexOfMinimum.h"
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <random>
@@ -32,55 +32,58 @@ public:
 static const InitArray initArray;
 
 static void
-findMinimumIndexC(benchmark::State& state)
+findIdxMinC(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
     int32_t minIndex =
-      findMinimumIndex::impl<findMinimumIndex::C>(initArray.array, n);
+      findIndexOfMinimum::impl<findIndexOfMinimum::C>(initArray.array, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexC)->RangeMultiplier(2)->Range(nstart, nend);
+BENCHMARK(findIdxMinC)->RangeMultiplier(2)->Range(nstart, nend);
 
 static void
-findMinimumIndexSTL(benchmark::State& state)
+findIdxMinSTL(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
     int32_t minIndex =
-      findMinimumIndex::impl<findMinimumIndex::STL>(initArray.array, n);
+      findIndexOfMinimum::impl<findIndexOfMinimum::STL>(initArray.array, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexSTL)->RangeMultiplier(2)->Range(nstart, nend);
+BENCHMARK(findIdxMinSTL)->RangeMultiplier(2)->Range(nstart, nend);
 
 static void
-findMinimumIndexVecBlend(benchmark::State& state)
+findIdxMinVecAlwaysTrackIdx(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
     int32_t minIndex =
-      findMinimumIndex::impl<findMinimumIndex::VecBlend>(initArray.array, n);
+      findIndexOfMinimum::impl<findIndexOfMinimum::VecAlwaysTrackIdx>(initArray.array, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexVecBlend)->RangeMultiplier(2)->Range(nstart, nend);
+BENCHMARK(findIdxMinVecAlwaysTrackIdx)->RangeMultiplier(2)->Range(nstart, nend);
 
 static void
-findMinimumIndexVecUnordered(benchmark::State& state)
+findIdxMinVecUpdateIdxOnNewMin(benchmark::State& state)
 {
   for (auto _ : state) {
     const int n = state.range(0);
-    int32_t minIndex = findMinimumIndex::impl<findMinimumIndex::VecUnordered>(
-      initArray.array, n);
+    int32_t minIndex =
+      findIndexOfMinimum::impl<findIndexOfMinimum::VecUpdateIdxOnNewMin>(
+        initArray.array, n);
     benchmark::DoNotOptimize(&minIndex);
     benchmark::ClobberMemory();
   }
 }
-BENCHMARK(findMinimumIndexVecUnordered)->RangeMultiplier(2)->Range(nstart, nend);
+BENCHMARK(findIdxMinVecUpdateIdxOnNewMin)
+  ->RangeMultiplier(2)
+  ->Range(nstart, nend);
 
 BENCHMARK_MAIN();

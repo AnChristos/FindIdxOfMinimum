@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # set the project name and version
-project(findMinimumIndex-SIMD VERSION 1.0)
+project(findIndexOfMinimum-SIMD VERSION 1.0)
 
 
 
@@ -14,11 +14,11 @@ list(APPEND CMAKE_PREFIX_PATH $ENV{HOME}/.local/)
 find_package(benchmark REQUIRED)
 find_package (Threads)
 
-add_executable(findMinimumIndex_test 
-	       findMinimumIndex_test.cxx)
+add_executable(findIndexOfMinimum_test 
+	       findIndexOfMinimum_test.cxx)
 
-add_executable(findMinimumIndex_bench 
-	       findMinimumIndex_bench.cxx)
+add_executable(findIndexOfMinimum_bench 
+	       findIndexOfMinimum_bench.cxx)
 
-target_link_libraries(findMinimumIndex_bench  benchmark::benchmark)
+target_link_libraries(findIndexOfMinimum_bench  benchmark::benchmark)
 
