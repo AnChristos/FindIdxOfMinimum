@@ -226,7 +226,7 @@ vecFindMinimum(const float* distancesIn, int n)
   return minvalue;
 }
 [[gnu::always_inline]] inline int32_t
-vecIdxofValue(const float value, const float* distancesIn, int n)
+vecIdxOfValue(const float value, const float* distancesIn, int n)
 {
   using namespace CxxUtils;
   const float* array = std::assume_aligned<alignment>(distancesIn);
@@ -272,11 +272,6 @@ vecMinThenIdx(const float* distancesIn, int n)
   const float* array = std::assume_aligned<alignment>(distancesIn);
   constexpr int blockSizePower2 = 7;
   constexpr int blockSize = 2 << blockSizePower2;
-  // lets do this separately
-  if (n <= blockSize) {
-    float min = vecFindMinimum(array, n);
-    return vecIdxofValue(min, array, n);
-  }
   // We might have a remainder that we need to handle
   const int remainder = n & (blockSize - 1);
   float min = array[0];
@@ -295,10 +290,10 @@ vecMinThenIdx(const float* distancesIn, int n)
     offset += blockSize;
   }
   if (blockOfMin < 0) {
-    return vecIdxofValue(min, array, remainder);
+    return vecIdxOfValue(min, array, remainder);
   }
   const int start = remainder + blockOfMin * blockSize;
-  return start + vecIdxofValue(min, array + start, blockSize);
+  return start + vecIdxOfValue(min, array + start, blockSize);
 }
 } // findIndexOfMinimumDetail
 
