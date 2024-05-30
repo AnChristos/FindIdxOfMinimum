@@ -2,6 +2,7 @@
 #define FINDMINIMUMINDEX
 #include "vec.h"
 #include <algorithm>
+#include <memory>
 
 namespace findIndexOfMinimumDetail {
 
@@ -10,7 +11,7 @@ constexpr int alignment = 32;
 [[gnu::always_inline]] inline int32_t
 scalarC(const float* distancesIn, int n)
 {
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
   float minvalue = array[0];
   int minIndex = 0;
   for (int i = 0; i < n; ++i) {
@@ -27,7 +28,7 @@ scalarC(const float* distancesIn, int n)
 [[gnu::always_inline]] inline int32_t
 scalarSTL(const float* distancesIn, int n)
 {
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
   return std::distance(array, std::min_element(array, array + n));
 }
 
@@ -36,7 +37,7 @@ scalarSTL(const float* distancesIn, int n)
 vecAlwaysTrackIdx(const float* distancesIn, int n)
 {
   using namespace CxxUtils;
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
   const vec<int, 4> increment = { 16, 16, 16, 16 };
 
   vec<int, 4> indices1 = { 0, 1, 2, 3 };
@@ -122,7 +123,7 @@ vecAlwaysTrackIdx(const float* distancesIn, int n)
 vecUpdateIdxOnNewMin(const float* distancesIn, int n)
 {
   using namespace CxxUtils;
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
 
   int32_t idx = 0;
   float min = distancesIn[0];
@@ -200,7 +201,7 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
 vecFindMinimum(const float* distancesIn, int n)
 {
   using namespace CxxUtils;
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
 
   vec<float, 4> minValues1;
   vec<float, 4> minValues2;
@@ -285,7 +286,7 @@ vecFindMinimum(const float* distancesIn, int n)
 vecIdxofValue(const float value, const float* distancesIn, int n)
 {
   using namespace CxxUtils;
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
 
   vec<float, 4> values1;
   vec<float, 4> values2;
@@ -325,11 +326,37 @@ vecIdxofValue(const float value, const float* distancesIn, int n)
 vecMinThenIdx(const float* distancesIn, int n)
 {
   using namespace CxxUtils;
-  float* array = (float*)__builtin_assume_aligned(distancesIn, alignment);
-  const float min = vecFindMinimum(array, n);
-  return vecIdxofValue(min, array, n);
+  const float* array = std::assume_aligned<alignment>(distancesIn);
+  constexpr int blockSizePower2 = 8;
+  constexpr int blockSize = 2 << blockSizePower2;
+  // lets do this separately
+  if (n < blockSize) {
+    float min = vecFindMinimum(array, n);
+    return vecIdxofValue(min, array, n);
+  }
+  // We might have a remainder that we need to handle
+  const int remainder = n & (blockSize - 1);
+  float min = array[0];
+  if (remainder != 0) {
+    min = vecFindMinimum(array, remainder);
+  }
+  int numBlocks = (n - remainder) / blockSize;
+  int offset = remainder;
+  int blockOfMin = -1;
+  for (int32_t i = 0; i < numBlocks; ++i) {
+    float mintmp = vecFindMinimum(array + offset, blockSize);
+    if (mintmp < min) {
+      min = mintmp;
+      blockOfMin = i;
+    }
+    offset += blockSize;
+  }
+  if (blockOfMin < 0) {
+    return vecIdxofValue(min, array, remainder);
+  }
+  const int start = remainder + blockOfMin * blockSize;
+  return start + vecIdxofValue(min, array + start, blockSize);
 }
-
 } // findIndexOfMinimumDetail
 
 namespace findIndexOfMinimum {

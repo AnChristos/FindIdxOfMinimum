@@ -20,7 +20,7 @@ public:
       array[i] = dis(gen);
     }
     // in case we want to sort
-    //std::sort(array, array + nend, [](float a, float b) { return a > b; });
+    // std::sort(array, array + nend, [](float a, float b) { return a > b; });
   }
   ~InitArray() { free(array); }
   float* array;

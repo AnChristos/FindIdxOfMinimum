@@ -4,7 +4,7 @@
 #include <random>
 
 constexpr int alignment = 32;
-constexpr size_t n = 4096;
+constexpr size_t n = 4064; // dividable with 32 but not 512
 struct InitArray
 {
 public:
@@ -77,7 +77,8 @@ static void
 findvecMinThenIdx()
 {
   int32_t minIndex =
-    findIndexOfMinimum::impl<findIndexOfMinimum::VecMinThenIdx>(initArray.array, n);
+    findIndexOfMinimum::impl<findIndexOfMinimum::VecMinThenIdx>(initArray.array,
+                                                                n);
   std::cout << "Vec Index of Minimum vecMinThenIdx : " << minIndex
             << " with value " << initArray.array[minIndex] << '\n';
 }
