@@ -133,11 +133,7 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
   vec<float, 4> values2;
   vec<float, 4> values3;
   vec<float, 4> values4;
-  vec<float, 4> values5;
-  vec<float, 4> values6;
-  vec<float, 4> values7;
-  vec<float, 4> values8;
-  for (int i = 0; i < n; i += 32) {
+  for (int i = 0; i < n; i += 16) {
     // 1
     vload(values1, array + i); // 0-3
     // 2
@@ -146,31 +142,13 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
     vload(values3, array + i + 8); // 8-11
     // 4
     vload(values4, array + i + 12); // 12-15
-    // 5
-    vload(values5, array + i + 16); // 16-19
-    // 6
-    vload(values6, array + i + 20); // 20-23
-    // 7
-    vload(values7, array + i + 24); // 24-27
-    // 8
-    vload(values8, array + i + 28); // 28-31
 
     // Compare //1 with //2
     vmin(values1, values1, values2);
     // compare //3 with //4
     vmin(values3, values3, values4);
-    // Compare //5 with //6
-    vmin(values5, values5, values6);
-    // compare /7 with //8
-    vmin(values7, values7, values8);
-
     // Compare //1 with //3
     vmin(values1, values1, values3);
-    // Compare //5 with //7
-    vmin(values5, values5, values7);
-    // Compare //1 with //5
-    vmin(values1, values1, values5);
-
     // see if the new minimum contain something less
     // than the existing.
     vec<int, 4> newMinimumMask = values1 < minValues;
@@ -189,7 +167,7 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
   /*
    * Do the final calculation scalar way
    */
-  for (int i = idx; i < idx + 32; ++i) {
+  for (int i = idx; i < idx + 16; ++i) {
     if (distancesIn[i] == min) {
       return i;
     }
@@ -207,27 +185,15 @@ vecFindMinimum(const float* distancesIn, int n)
   vec<float, 4> minValues2;
   vec<float, 4> minValues3;
   vec<float, 4> minValues4;
-  vec<float, 4> minValues5;
-  vec<float, 4> minValues6;
-  vec<float, 4> minValues7;
-  vec<float, 4> minValues8;
   vload(minValues1, array);
   vload(minValues2, array + 4);
   vload(minValues3, array + 8);
   vload(minValues4, array + 12);
-  vload(minValues5, array + 16);
-  vload(minValues6, array + 20);
-  vload(minValues7, array + 24);
-  vload(minValues8, array + 28);
   vec<float, 4> values1;
   vec<float, 4> values2;
   vec<float, 4> values3;
   vec<float, 4> values4;
-  vec<float, 4> values5;
-  vec<float, 4> values6;
-  vec<float, 4> values7;
-  vec<float, 4> values8;
-  for (int i = 32; i < n; i += 32) {
+  for (int i = 16; i < n; i += 16) {
     // 1
     vload(values1, array + i); // 0-3
     vmin(minValues1, values1, minValues1);
@@ -240,36 +206,13 @@ vecFindMinimum(const float* distancesIn, int n)
     // 4
     vload(values4, array + i + 12); // 12-15
     vmin(minValues4, values4, minValues4);
-    // 4
-    vload(values5, array + i + 16); // 16-19
-    vmin(minValues5, values5, minValues5);
-    // 4
-    vload(values6, array + i + 20); // 20-23
-    vmin(minValues6, values6, minValues6);
-    // 4
-    vload(values7, array + i + 24); // 24-27
-    vmin(minValues7, values7, minValues7);
-    // 4
-    vload(values8, array + i + 28); // 28-31
-    vmin(minValues8, values8, minValues8);
   }
   // Compare //1 with //2
   vmin(minValues1, minValues1, minValues2);
   // compare //3 with //4
   vmin(minValues3, minValues3, minValues4);
-  // compare //5 with //6
-  vmin(minValues5, minValues5, minValues6);
-  // compare //7 with //8
-  vmin(minValues7, minValues7, minValues8);
-
   // Compare //1 with //3
   vmin(minValues1, minValues1, minValues3);
-  // Compare //5 with //7
-  vmin(minValues5, minValues5, minValues7);
-
-  // Compare //1 with //5
-  vmin(minValues1, minValues1, minValues5);
-
   // Do the final calculation scalar way
   float minValues[4];
   vstore(minValues, minValues1);
@@ -327,10 +270,10 @@ vecMinThenIdx(const float* distancesIn, int n)
 {
   using namespace CxxUtils;
   const float* array = std::assume_aligned<alignment>(distancesIn);
-  constexpr int blockSizePower2 = 8;
+  constexpr int blockSizePower2 = 7;
   constexpr int blockSize = 2 << blockSizePower2;
   // lets do this separately
-  if (n < blockSize) {
+  if (n <= blockSize) {
     float min = vecFindMinimum(array, n);
     return vecIdxofValue(min, array, n);
   }
