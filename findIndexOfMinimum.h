@@ -2,6 +2,7 @@
 #define FINDMINIMUMINDEX
 #include "vec.h"
 #include <algorithm>
+#include <iostream>
 #include <memory>
 
 namespace findIndexOfMinimumDetail {
@@ -270,30 +271,35 @@ vecMinThenIdx(const float* distancesIn, int n)
 {
   using namespace CxxUtils;
   const float* array = std::assume_aligned<alignment>(distancesIn);
-  constexpr int blockSizePower2 = 7;
+  constexpr int blockSizePower2 = 8;
   constexpr int blockSize = 2 << blockSizePower2;
+  // case for n less than blockSize
+  if (n <= blockSize) {
+    float min = vecFindMinimum(array, n);
+    return vecIdxOfValue(min, array, n);
+  }
+  int32_t idx = 0;
+  float min = array[0];
   // We might have a remainder that we need to handle
   const int remainder = n & (blockSize - 1);
-  float min = array[0];
-  if (remainder != 0) {
-    min = vecFindMinimum(array, remainder);
-  }
-  int numBlocks = (n - remainder) / blockSize;
-  int offset = remainder;
-  int blockOfMin = -1;
-  for (int32_t i = 0; i < numBlocks; ++i) {
-    float mintmp = vecFindMinimum(array + offset, blockSize);
+  for (int32_t i = 0; i < (n - remainder); i += blockSize) {
+    float mintmp = vecFindMinimum(array + i, blockSize);
     if (mintmp < min) {
       min = mintmp;
-      blockOfMin = i;
+      idx = i;
     }
-    offset += blockSize;
   }
-  if (blockOfMin < 0) {
-    return vecIdxOfValue(min, array, remainder);
+  if (remainder != 0) {
+    int index = n - remainder;
+    float mintmp = vecFindMinimum(array + index, remainder);
+    // if the minimu is here
+    if (mintmp < min) {
+      min = mintmp;
+      return index + vecIdxOfValue(min, array + index, remainder);
+    }
   }
-  const int start = remainder + blockOfMin * blockSize;
-  return start + vecIdxOfValue(min, array + start, blockSize);
+  // otherwise no remainder
+  return idx + vecIdxOfValue(min, array + idx, blockSize);
 }
 } // findIndexOfMinimumDetail
 
