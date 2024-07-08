@@ -97,20 +97,5 @@ findVecMinThenIdx(benchmark::State& state)
 }
 BENCHMARK(findVecMinThenIdx)->RangeMultiplier(2)->Range(nstart, nend);
 
-static void
-findVecMinThenIdxT(benchmark::State& state)
-{
-  for (auto _ : state) {
-    const int n = state.range(0);
-    int32_t minIndex =
-      findIndexOfMinimum::impl<findIndexOfMinimum::VecMinThenIdxT>(
-        initArray.array, n);
-    benchmark::DoNotOptimize(&minIndex);
-    benchmark::ClobberMemory();
-  }
-}
-BENCHMARK(findVecMinThenIdxT)->RangeMultiplier(2)->Range(nstart, nend);
-
-
 
 BENCHMARK_MAIN();

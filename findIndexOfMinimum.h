@@ -2,9 +2,9 @@
 #define FINDMINIMUMINDEX
 #include "vec.h"
 #include <algorithm>
+#include <climits>
 #include <memory>
 #include <numeric>
-#include <climits>
 
 namespace findIndexOfMinimumDetail {
 
@@ -177,36 +177,47 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
   return 0;
 }
 
+template<int ISA_WIDTH, typename T>
 [[gnu::always_inline]] inline float
-vecFindMinimum(const float* distancesIn, int n)
+vecFindMinimum(const T* distancesIn, int n)
 {
   using namespace CxxUtils;
-  const float* array = std::assume_aligned<alignment>(distancesIn);
+  constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
+  constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
+  constexpr int STRIDE = 4 * VEC_WIDTH;
+  static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
+                "ISA_WIDTH not a power of 2");
+  static_assert((STRIDE & (STRIDE - 1)) == 0, "STRIDE not a power of 2");
+  static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
+                "ALIGNMENT not a power of 2");
+  static_assert(std::is_floating_point_v<T>, "T not a floating point type");
 
-  vec<float, 4> minValues1;
-  vec<float, 4> minValues2;
-  vec<float, 4> minValues3;
-  vec<float, 4> minValues4;
+  const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
+  using vec_t = vec<T, VEC_WIDTH>;
+  vec_t minValues1;
+  vec_t minValues2;
+  vec_t minValues3;
+  vec_t minValues4;
   vload(minValues1, array);
-  vload(minValues2, array + 4);
-  vload(minValues3, array + 8);
-  vload(minValues4, array + 12);
-  vec<float, 4> values1;
-  vec<float, 4> values2;
-  vec<float, 4> values3;
-  vec<float, 4> values4;
-  for (int i = 16; i < n; i += 16) {
+  vload(minValues2, array + VEC_WIDTH);
+  vload(minValues3, array + VEC_WIDTH * 2);
+  vload(minValues4, array + VEC_WIDTH * 3);
+  vec_t values1;
+  vec_t values2;
+  vec_t values3;
+  vec_t values4;
+  for (int i = STRIDE; i < n; i += STRIDE) {
     // 1
-    vload(values1, array + i); // 0-3
+    vload(values1, array + i);
     vmin(minValues1, values1, minValues1);
     // 2
-    vload(values2, array + i + 4); // 4-7
+    vload(values2, array + i + VEC_WIDTH);
     vmin(minValues2, values2, minValues2);
     // 3
-    vload(values3, array + i + 8); // 8-11
+    vload(values3, array + i + 2 * VEC_WIDTH);
     vmin(minValues3, values3, minValues3);
     // 4
-    vload(values4, array + i + 12); // 12-15
+    vload(values4, array + i + 3 * VEC_WIDTH);
     vmin(minValues4, values4, minValues4);
   }
   // Compare //1 with //2
@@ -216,241 +227,60 @@ vecFindMinimum(const float* distancesIn, int n)
   // Compare //1 with //3
   vmin(minValues1, minValues1, minValues3);
   // Do the final calculation scalar way
-  float minValues[4];
-  vstore(minValues, minValues1);
-  float minvalue = minValues[0];
-  for (size_t i = 1; i < 4; ++i) {
-    const float value = minValues[i];
-    if (value < minvalue) {
-      minvalue = value;
-    }
-  }
-  return minvalue;
-}
-[[gnu::always_inline]] inline int32_t
-vecIdxOfValue(const float value, const float* distancesIn, int n)
-{
-  using namespace CxxUtils;
-  const float* array = std::assume_aligned<alignment>(distancesIn);
-
-  vec<float, 4> values1;
-  vec<float, 4> values2;
-  vec<float, 4> values3;
-  vec<float, 4> values4;
-  vec<float, 4> target;
-  vbroadcast(target, value);
-  for (int i = 0; i < n; i += 16) {
-    // 1
-    vload(values1, array + i); // 0-3
-    vec<int, 4> eq1 = values1 == target;
-    // 2
-    vload(values2, array + i + 4); // 4-7
-    vec<int, 4> eq2 = values2 == target;
-    // 3
-    vload(values3, array + i + 8); // 8-11
-    vec<int, 4> eq3 = values3 == target;
-    // 4
-    vload(values4, array + i + 12); // 12-15
-    vec<int, 4> eq4 = values4 == target;
-
-    vec<int, 4> eq12 = eq1 || eq2;
-    vec<int, 4> eq34 = eq3 || eq4;
-    vec<int, 4> eqAny = eq12 || eq34;
-    if (vany(eqAny)) {
-      for (int32_t idx = i; idx < i + 16; ++idx) {
-        if (distancesIn[idx] == value) {
-          return idx;
-        }
-      }
-    }
-  }
-  return -1;
-}
-
-[[gnu::always_inline]] inline int32_t
-vecMinThenIdx(const float* distancesIn, int n)
-{
-  using namespace CxxUtils;
-  const float* array = std::assume_aligned<alignment>(distancesIn);
-  constexpr int blockSizePower2 = 8;
-  constexpr int blockSize = 2 << blockSizePower2;
-  // case for n less than blockSize
-  if (n <= blockSize) {
-    float min = vecFindMinimum(array, n);
-    return vecIdxOfValue(min, array, n);
-  }
-  int32_t idx = 0;
-  float min = array[0];
-  // We might have a remainder that we need to handle
-  const int remainder = n & (blockSize - 1);
-  for (int32_t i = 0; i < (n - remainder); i += blockSize) {
-    float mintmp = vecFindMinimum(array + i, blockSize);
-    if (mintmp < min) {
-      min = mintmp;
-      idx = i;
-    }
-  }
-  if (remainder != 0) {
-    int index = n - remainder;
-    float mintmp = vecFindMinimum(array + index, remainder);
-    // if the minimu is here
-    if (mintmp < min) {
-      min = mintmp;
-      return index + vecIdxOfValue(min, array + index, remainder);
-    }
-  }
-  // otherwise no remainder
-  return idx + vecIdxOfValue(min, array + idx, blockSize);
-}
-
-// TEMPLATED IMPLEMENTATION =========>
-/* we can also attempt to template the last solution find index
- * and the then minimimum*/
-#define IMPL_DO_PRAGMA( x ) _Pragma( #x )
-#if defined( __clang__ )
-#  define IMPL_LOOP_UNROLL( x ) IMPL_DO_PRAGMA( clang loop unroll_count( x ) )
-#elif defined( __GNUC__ )
-#  define IMPL_LOOP_UNROLL( x ) IMPL_DO_PRAGMA( GCC unroll x )
-#else
-#  define IMPL_LOOP_UNROLL( x )
-#endif
-
-// Functionalit similar to std::reduce for array of vector types.
-// The reduction result is stored in array[0].
-template <typename T, int N, int SIZE>
-void vreduce(CxxUtils::vec<T, N> array[SIZE], const auto& lambda) {
-
-  static_assert(SIZE != 0, "SIZE can not be 0");
-  static_assert((SIZE & (SIZE - 1)) == 0 || SIZE == 1,
-                "SIZE not 1 or a power of 2");
-  if constexpr (SIZE == 1) {
-    return;
-  }
-  for (int i = 0; i < SIZE / 2; i++) {
-    lambda(array[i], array[i + (SIZE / 2)]);
-  }
-  if constexpr (SIZE / 2 > 0) {
-    vreduce<T, N, SIZE / 2>(array, lambda);
-  } else {
-    return;
-  }
-}
-
-/// ISA_WIDTH is the ISA width in bits e.g 128 for SSE
-/// 256 for AVX2
-///
-/// STRIDE is how many elements (in units of elements) we want to cover
-/// in each iteration
-///
-/// T is the element type
-///
-/// The input array is assumed to be at least
-/// ISA_WIDTH/CHAR_BIT aligned e.g 16 for SSE4, 32 for AVX2
-///
-/// Based on the ISA and the element type
-/// We choose the best size for the SIMD types
-///
-/// And then we use an array of as  many SIMD types needed
-/// As to cover the stride.
-
-template <int ISA_WIDTH, int STRIDE, typename T>
-[[gnu::always_inline]] inline
-T vFindMinimum(const T* distancesIn, int n) {
-  using namespace CxxUtils;
-  //We want to have vectors that fit on the specified
-  //ISA
-  //For large STRIDES we use an array of such
-  //vectors
-  constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
-  constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
-  constexpr int VECTOR_COUNT = STRIDE / VEC_WIDTH;
-  static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
-                "ISA_WIDTH not a power of 2");
-  static_assert((STRIDE & (STRIDE - 1)) == 0,
-                "STRIDE not a power of 2");
-  static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
-                "ALIGNMENT not a power of 2");
-  static_assert(std::is_floating_point_v<T> || std::is_integral_v<T>, "T not a floating or integral type");
-
-  const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
-
-  using vec_T = vec<T, VEC_WIDTH>;
-  vec_T minValues[VECTOR_COUNT];
-  // Limit unrolling to 4 for now as too much unrolling can
-  // also cause problems.
-  // When VECTOR_COUNT is less than 4 the relevant loops
-  // are removed
-  IMPL_LOOP_UNROLL(4)
-  for (int i = 0; i < VECTOR_COUNT; i++) {
-    vload(minValues[i], array + (VEC_WIDTH * i));
-  }
-  vec_T values[VECTOR_COUNT];
-  for (int i = STRIDE; i < n; i += STRIDE) {
-    IMPL_LOOP_UNROLL(4)
-    for (int j = 0; j < VECTOR_COUNT; ++j) {
-      vload(values[j], array + i + (VEC_WIDTH * j));
-      vmin(minValues[j], values[j], minValues[j]);
-    }
-  }
-
-  vreduce<T, VEC_WIDTH, VECTOR_COUNT>(
-      minValues,
-      [](vec<T, VEC_WIDTH>& a, vec<T, VEC_WIDTH>& b) { a = a < b ? a : b; });
-
   T finalMinValues[VEC_WIDTH];
-  vstore(finalMinValues, minValues[0]);
+  vstore(finalMinValues, minValues1);
 
   // Do the final calculation scalar way
   return std::reduce(std::begin(finalMinValues),
                      std::end(finalMinValues),
                      finalMinValues[0],
-                     [](float a, float b){ return a < b ? a : b; });
+                     [](float a, float b) { return a < b ? a : b; });
+
 }
 
-template <int ISA_WIDTH, int STRIDE, typename T>
- [[gnu::always_inline]] inline
-int vIdxOfValue(const T value,
-                const T* distancesIn, int n) {
+template<int ISA_WIDTH, typename T>
+[[gnu::always_inline]] inline int32_t
+vecIdxOfValue(const T value, const T* distancesIn, int n)
+{
   using namespace CxxUtils;
-  //We want to have vectors that fit on the specified
-  //ISA
-  //For large STRIDES we use an array of such
-  //vectors
   constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
   constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
-  constexpr int VECTOR_COUNT = STRIDE / VEC_WIDTH;
+  constexpr int STRIDE = 4 * VEC_WIDTH;
   static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
                 "ISA_WIDTH not a power of 2");
-  static_assert((STRIDE & (STRIDE - 1)) == 0,
-                "STRIDE not a power of 2");
+  static_assert((STRIDE & (STRIDE - 1)) == 0, "STRIDE not a power of 2");
   static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
                 "ALIGNMENT not a power of 2");
-  static_assert(std::is_floating_point_v<T> || std::is_integral_v<T>, "T not a floating or integral type");
+  static_assert(std::is_floating_point_v<T>, "T not a floating point type");
 
   const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
-
-  using vec_T = vec<T, VEC_WIDTH>;
-  vec_T values[VECTOR_COUNT];
-  vec_T target;
+  using vec_t = vec<T, VEC_WIDTH>;
+  using vec_mask = vec_mask_type_t<vec_t>;
+  vec_t values1;
+  vec_t values2;
+  vec_t values3;
+  vec_t values4;
+  vec_t target;
   vbroadcast(target, value);
-  using vec_mask = vec_mask_type_t<vec<T, VEC_WIDTH>>;
-  vec_mask eqs[VECTOR_COUNT];
-
   for (int i = 0; i < n; i += STRIDE) {
-    IMPL_LOOP_UNROLL(4)
-    for (int j = 0; j < VECTOR_COUNT; j++) {
-      vload(values[j], array + i + (VEC_WIDTH * j));
-      eqs[j] = values[j] == target;
-    }
+    // 1
+    vload(values1, array + i);
+    vec_mask eq1 = values1 == target;
+    // 2
+    vload(values2, array + i + VEC_WIDTH);
+    vec_mask eq2 = values2 == target;
+    // 3
+    vload(values3, array + i + VEC_WIDTH * 2);
+    vec_mask eq3 = values3 == target;
+    // 4
+    vload(values4, array + i + VEC_WIDTH * 3);
+    vec_mask eq4 = values4 == target;
 
-    vreduce<vec_type_t<vec_mask>, VEC_WIDTH, VECTOR_COUNT>(
-        eqs, [](vec_mask& a, vec_mask& b) { a = a || b; });
-
-    // See if we have the value in any
-    // of the vectors
-    // If yes then use scalar code to locate it
-    if (vany(eqs[0])) {
-      for (int idx = i; idx < i + STRIDE; ++idx) {
+    vec_mask eq12 = eq1 || eq2;
+    vec_mask eq34 = eq3 || eq4;
+    vec_mask eqAny = eq12 || eq34;
+    if (vany(eqAny)) {
+      for (int32_t idx = i; idx < i + STRIDE; ++idx) {
         if (distancesIn[idx] == value) {
           return idx;
         }
@@ -460,34 +290,34 @@ int vIdxOfValue(const T value,
   return -1;
 }
 
-template <int ISA_WIDTH, int STRIDE, typename T>
- [[gnu::always_inline]] inline
-int vIdxOfMin(const T* distancesIn, int n) {
+template<int ISA_WIDTH, typename T>
+[[gnu::always_inline]] inline int32_t
+vecMinThenIdx(const T* distancesIn, int n)
+{
   using namespace CxxUtils;
+  constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
   constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
-  static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
+  constexpr int STRIDE = 4 * VEC_WIDTH;
+ static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
                 "ISA_WIDTH not a power of 2");
-  static_assert((STRIDE & (STRIDE - 1)) == 0,
-                "STRIDE not a power of 2");
+  static_assert((STRIDE & (STRIDE - 1)) == 0, "STRIDE not a power of 2");
   static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
                 "ALIGNMENT not a power of 2");
-  static_assert(std::is_floating_point_v<T> || std::is_integral_v<T>, "T not a floating or integral type");
+  static_assert(std::is_floating_point_v<T>, "T not a floating point type");
 
   const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
-  // Finding of minimum needs to loop over all elements
-  // But we can run the finding of index only inside a block
   constexpr int blockSize = 512;
   // case for n less than blockSize
   if (n <= blockSize) {
-    T min = vFindMinimum<ISA_WIDTH, STRIDE>(array, n);
-    return vIdxOfValue<ISA_WIDTH, STRIDE>(min, array, n);
+    T min = vecFindMinimum<ISA_WIDTH>(array, n);
+    return vecIdxOfValue<ISA_WIDTH>(min, array, n);
   }
-  int idx = 0;
+  int32_t idx = 0;
   T min = array[0];
   // We might have a remainder that we need to handle
   const int remainder = n & (blockSize - 1);
-  for (int i = 0; i < (n - remainder); i += blockSize) {
-    T mintmp = vFindMinimum<ISA_WIDTH, STRIDE>(array + i, blockSize);
+  for (int32_t i = 0; i < (n - remainder); i += blockSize) {
+    T mintmp = vecFindMinimum<ISA_WIDTH>(array + i, blockSize);
     if (mintmp < min) {
       min = mintmp;
       idx = i;
@@ -495,15 +325,15 @@ int vIdxOfMin(const T* distancesIn, int n) {
   }
   if (remainder != 0) {
     int index = n - remainder;
-    T mintmp = vFindMinimum<ISA_WIDTH, STRIDE>(array + index, remainder);
-    // if the minimum is in this part
+    float mintmp = vecFindMinimum<ISA_WIDTH>(array + index, remainder);
+    // if the minimu is here
     if (mintmp < min) {
       min = mintmp;
-      return index + vIdxOfValue<ISA_WIDTH, STRIDE>(min, array + index, remainder);
+      return index + vecIdxOfValue<ISA_WIDTH>(min, array + index, remainder);
     }
   }
-  //default return
-  return idx + vIdxOfValue<ISA_WIDTH, STRIDE>(min, array + idx, blockSize);
+  // otherwise no remainder
+  return idx + vecIdxOfValue<ISA_WIDTH>(min, array + idx, blockSize);
 }
 
 } // findIndexOfMinimumDetail
@@ -528,12 +358,10 @@ impl(const float* distancesIn, int n)
   } else if constexpr (I == VecAlwaysTrackIdx) {
     return findIndexOfMinimumDetail::vecAlwaysTrackIdx(distancesIn, n);
   } else if constexpr (I == VecMinThenIdx) {
-    return findIndexOfMinimumDetail::vecMinThenIdx(distancesIn, n);
-  } else if constexpr (I == VecMinThenIdxT) {
 #if defined(__AVX2__)
-    return findIndexOfMinimumDetail::vIdxOfMin<256, 16>(distancesIn, n);
+    return findIndexOfMinimumDetail::vecMinThenIdx<256>(distancesIn, n);
 #else
-    return findIndexOfMinimumDetail::vIdxOfMin<128, 16>(distancesIn, n);
+    return findIndexOfMinimumDetail::vecMinThenIdx<128>(distancesIn, n);
 #endif
   } else if constexpr (I == C) {
     return findIndexOfMinimumDetail::scalarC(distancesIn, n);
