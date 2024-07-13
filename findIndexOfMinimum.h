@@ -7,16 +7,19 @@
 #include <numeric>
 
 namespace findIndexOfMinimumDetail {
-
-constexpr int alignment = 32;
+//should be ok for up to AVX2
+constexpr int32_t alignment = 32;
+//
+//
 // index of minimum scalar
-[[gnu::always_inline]] inline int32_t
-scalarC(const float* distancesIn, int n)
+template <typename T>
+inline int32_t
+scalarC(const T* distancesIn, int32_t n)
 {
-  const float* array = std::assume_aligned<alignment>(distancesIn);
-  float minvalue = array[0];
-  int minIndex = 0;
-  for (int i = 0; i < n; ++i) {
+  const T* array = std::assume_aligned<alignment>(distancesIn);
+  T minvalue = array[0];
+  int32_t minIndex = 0;
+  for (int32_t i = 0; i < n; ++i) {
     const float value = array[i];
     if (value < minvalue) {
       minvalue = value;
@@ -27,16 +30,17 @@ scalarC(const float* distancesIn, int n)
 }
 
 // index of minimum STL
-[[gnu::always_inline]] inline int32_t
-scalarSTL(const float* distancesIn, int n)
+template <typename T>
+inline int32_t
+scalarSTL(const T* distancesIn, int32_t n)
 {
-  const float* array = std::assume_aligned<alignment>(distancesIn);
+  const T* array = std::assume_aligned<alignment>(distancesIn);
   return std::distance(array, std::min_element(array, array + n));
 }
 
 // index of minimum vectorized. Always tracking indices
-[[gnu::always_inline]] inline int32_t
-vecAlwaysTrackIdx(const float* distancesIn, int n)
+inline int32_t
+vecAlwaysTrackIdx(const float* distancesIn, int32_t n)
 {
   using namespace CxxUtils;
   const float* array = std::assume_aligned<alignment>(distancesIn);
@@ -65,7 +69,7 @@ vecAlwaysTrackIdx(const float* distancesIn, int n)
   vec<float, 4> values2;
   vec<float, 4> values3;
   vec<float, 4> values4;
-  for (int i = 16; i < n; i += 16) {
+  for (int32_t i = 16; i < n; i += 16) {
     // 1
     vload(values1, array + i); // 0-3
     indices1 = indices1 + increment;
@@ -93,7 +97,7 @@ vecAlwaysTrackIdx(const float* distancesIn, int n)
   }
 
   float minValues[16];
-  int minIndices[16];
+  int32_t minIndices[16];
   vstore(minValues, minValues1);
   vstore(minValues + 4, minValues2);
   vstore(minValues + 8, minValues3);
@@ -121,29 +125,34 @@ vecAlwaysTrackIdx(const float* distancesIn, int n)
 }
 
 // index of minimum vectorized. Update indices in new minimum
-[[gnu::always_inline]] inline int32_t
-vecUpdateIdxOnNewMin(const float* distancesIn, int n)
+template<size_t ISA_WIDTH, typename T>
+inline int32_t
+vecUpdateIdxOnNewMin(const T* distancesIn, int32_t n)
 {
   using namespace CxxUtils;
-  const float* array = std::assume_aligned<alignment>(distancesIn);
+  constexpr int32_t VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
+  constexpr size_t ALIGNMENT = ISA_WIDTH / CHAR_BIT;
+  const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
+  using vec_t = vec<T, VEC_WIDTH>;
+  using vec_mask = vec_mask_type_t<vec_t>;
 
   int32_t idx = 0;
-  float min = distancesIn[0];
-  vec<float, 4> minValues;
+  T min = distancesIn[0];
+  vec_t minValues;
   vbroadcast(minValues, min);
-  vec<float, 4> values1;
-  vec<float, 4> values2;
-  vec<float, 4> values3;
-  vec<float, 4> values4;
-  for (int i = 0; i < n; i += 16) {
+  vec_t values1;
+  vec_t values2;
+  vec_t values3;
+  vec_t values4;
+  for (int32_t i = 0; i < n; i += 4*VEC_WIDTH) {
     // 1
-    vload(values1, array + i); // 0-3
+    vload(values1, array + i);
     // 2
-    vload(values2, array + i + 4); // 4-7
+    vload(values2, array + i +  VEC_WIDTH);
     // 3
-    vload(values3, array + i + 8); // 8-11
+    vload(values3, array + i + 2* VEC_WIDTH);
     // 4
-    vload(values4, array + i + 12); // 12-15
+    vload(values4, array + i + 3* VEC_WIDTH);
 
     // Compare //1 with //2
     vmin(values1, values1, values2);
@@ -153,12 +162,12 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
     vmin(values1, values1, values3);
     // see if the new minimum contain something less
     // than the existing.
-    vec<int, 4> newMinimumMask = values1 < minValues;
+    vec_mask newMinimumMask = values1 < minValues;
     if (vany(newMinimumMask)) {
       idx = i;
-      float minCandidates[4];
+      T minCandidates[VEC_WIDTH];
       vstore(minCandidates, values1);
-      for (int j = 0; j < 4; ++j) {
+      for (int32_t j = 0; j < VEC_WIDTH; ++j) {
         if (minCandidates[j] < min) {
           min = minCandidates[j];
         }
@@ -169,7 +178,7 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
   /*
    * Do the final calculation scalar way
    */
-  for (int i = idx; i < idx + 16; ++i) {
+  for (int32_t i = idx; i < idx + 4 * VEC_WIDTH; ++i) {
     if (distancesIn[i] == min) {
       return i;
     }
@@ -177,20 +186,13 @@ vecUpdateIdxOnNewMin(const float* distancesIn, int n)
   return 0;
 }
 
-template<int ISA_WIDTH, typename T>
-[[gnu::always_inline]] inline float
-vecFindMinimum(const T* distancesIn, int n)
+template<size_t ISA_WIDTH, typename T>
+inline float
+vecFindMinimum(const T* distancesIn, int32_t n)
 {
   using namespace CxxUtils;
-  constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
-  constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
-  constexpr int STRIDE = 4 * VEC_WIDTH;
-  static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
-                "ISA_WIDTH not a power of 2");
-  static_assert((STRIDE & (STRIDE - 1)) == 0, "STRIDE not a power of 2");
-  static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
-                "ALIGNMENT not a power of 2");
-  static_assert(std::is_floating_point_v<T>, "T not a floating point type");
+  constexpr int32_t VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
+  constexpr size_t ALIGNMENT = ISA_WIDTH / CHAR_BIT;
 
   const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
   using vec_t = vec<T, VEC_WIDTH>;
@@ -206,7 +208,7 @@ vecFindMinimum(const T* distancesIn, int n)
   vec_t values2;
   vec_t values3;
   vec_t values4;
-  for (int i = STRIDE; i < n; i += STRIDE) {
+  for (int32_t i = 4*VEC_WIDTH; i < n; i += 4*VEC_WIDTH) {
     // 1
     vload(values1, array + i);
     vmin(minValues1, values1, minValues1);
@@ -238,20 +240,13 @@ vecFindMinimum(const T* distancesIn, int n)
 
 }
 
-template<int ISA_WIDTH, typename T>
-[[gnu::always_inline]] inline int32_t
-vecIdxOfValue(const T value, const T* distancesIn, int n)
+template<size_t ISA_WIDTH, typename T>
+inline int32_t
+vecIdxOfValue(const T value, const T* distancesIn, int32_t n)
 {
   using namespace CxxUtils;
-  constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
-  constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
-  constexpr int STRIDE = 4 * VEC_WIDTH;
-  static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
-                "ISA_WIDTH not a power of 2");
-  static_assert((STRIDE & (STRIDE - 1)) == 0, "STRIDE not a power of 2");
-  static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
-                "ALIGNMENT not a power of 2");
-  static_assert(std::is_floating_point_v<T>, "T not a floating point type");
+  constexpr int32_t VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
+  constexpr size_t ALIGNMENT = ISA_WIDTH / CHAR_BIT;
 
   const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
   using vec_t = vec<T, VEC_WIDTH>;
@@ -262,7 +257,7 @@ vecIdxOfValue(const T value, const T* distancesIn, int n)
   vec_t values4;
   vec_t target;
   vbroadcast(target, value);
-  for (int i = 0; i < n; i += STRIDE) {
+  for (int32_t i = 0; i < n; i += 4*VEC_WIDTH) {
     // 1
     vload(values1, array + i);
     vec_mask eq1 = values1 == target;
@@ -280,7 +275,7 @@ vecIdxOfValue(const T value, const T* distancesIn, int n)
     vec_mask eq34 = eq3 || eq4;
     vec_mask eqAny = eq12 || eq34;
     if (vany(eqAny)) {
-      for (int32_t idx = i; idx < i + STRIDE; ++idx) {
+      for (int32_t idx = i; idx < i + 4*VEC_WIDTH; ++idx) {
         if (distancesIn[idx] == value) {
           return idx;
         }
@@ -290,23 +285,15 @@ vecIdxOfValue(const T value, const T* distancesIn, int n)
   return -1;
 }
 
-template<int ISA_WIDTH, typename T>
-[[gnu::always_inline]] inline int32_t
-vecMinThenIdx(const T* distancesIn, int n)
+template<size_t ISA_WIDTH, typename T>
+inline int32_t
+vecMinThenIdx(const T* distancesIn, int32_t n)
 {
   using namespace CxxUtils;
-  constexpr int VEC_WIDTH = ISA_WIDTH / (sizeof(T) * CHAR_BIT);
-  constexpr int ALIGNMENT = ISA_WIDTH / CHAR_BIT;
-  constexpr int STRIDE = 4 * VEC_WIDTH;
- static_assert((ISA_WIDTH & (ISA_WIDTH - 1)) == 0,
-                "ISA_WIDTH not a power of 2");
-  static_assert((STRIDE & (STRIDE - 1)) == 0, "STRIDE not a power of 2");
-  static_assert((ALIGNMENT & (ALIGNMENT - 1)) == 0,
-                "ALIGNMENT not a power of 2");
-  static_assert(std::is_floating_point_v<T>, "T not a floating point type");
+  constexpr size_t ALIGNMENT = ISA_WIDTH / CHAR_BIT;
 
   const T* array = std::assume_aligned<ALIGNMENT>(distancesIn);
-  constexpr int blockSize = 512;
+  constexpr int32_t blockSize = 512;
   // case for n less than blockSize
   if (n <= blockSize) {
     T min = vecFindMinimum<ISA_WIDTH>(array, n);
@@ -315,7 +302,7 @@ vecMinThenIdx(const T* distancesIn, int n)
   int32_t idx = 0;
   T min = array[0];
   // We might have a remainder that we need to handle
-  const int remainder = n & (blockSize - 1);
+  const int32_t remainder = n & (blockSize - 1);
   for (int32_t i = 0; i < (n - remainder); i += blockSize) {
     T mintmp = vecFindMinimum<ISA_WIDTH>(array + i, blockSize);
     if (mintmp < min) {
@@ -324,8 +311,8 @@ vecMinThenIdx(const T* distancesIn, int n)
     }
   }
   if (remainder != 0) {
-    int index = n - remainder;
-    float mintmp = vecFindMinimum<ISA_WIDTH>(array + index, remainder);
+    int32_t index = n - remainder;
+    T mintmp = vecFindMinimum<ISA_WIDTH>(array + index, remainder);
     // if the minimu is here
     if (mintmp < min) {
       min = mintmp;
@@ -349,12 +336,19 @@ enum Impl
   STL = 5
 };
 
+//We want to inline everything here
 template<enum Impl I>
-[[gnu::always_inline]] inline int32_t
-impl(const float* distancesIn, int n)
+[[gnu::flatten]]
+[[gnu::always_inline]]
+inline int32_t
+impl(const float* distancesIn, int32_t n)
 {
   if constexpr (I == VecUpdateIdxOnNewMin) {
-    return findIndexOfMinimumDetail::vecUpdateIdxOnNewMin(distancesIn, n);
+#if defined(__AVX2__)
+    return findIndexOfMinimumDetail::vecUpdateIdxOnNewMin<256>(distancesIn, n);
+#else
+    return findIndexOfMinimumDetail::vecUpdateIdxOnNewMin<128>(distancesIn, n);
+#endif
   } else if constexpr (I == VecAlwaysTrackIdx) {
     return findIndexOfMinimumDetail::vecAlwaysTrackIdx(distancesIn, n);
   } else if constexpr (I == VecMinThenIdx) {
